@@ -14,20 +14,19 @@ import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import java.util.List;
+
 import static androidx.test.espresso.Espresso.onView;
 import static androidx.test.espresso.action.ViewActions.click;
 import static androidx.test.espresso.assertion.ViewAssertions.matches;
-import static androidx.test.espresso.intent.Intents.intended;
 import static androidx.test.espresso.intent.Intents.intending;
 import static androidx.test.espresso.intent.matcher.IntentMatchers.hasComponent;
-import static androidx.test.espresso.intent.matcher.IntentMatchers.hasExtra;
 import static androidx.test.espresso.matcher.ViewMatchers.isDisplayed;
 import static androidx.test.espresso.matcher.ViewMatchers.isEnabled;
 import static androidx.test.espresso.matcher.ViewMatchers.Visibility.GONE;
 import static androidx.test.espresso.matcher.ViewMatchers.withEffectiveVisibility;
 import static androidx.test.espresso.matcher.ViewMatchers.withId;
 import static androidx.test.espresso.matcher.ViewMatchers.withText;
-import static org.hamcrest.Matchers.not;
 
 /**
  * Live weather instrumentation tests for two cities.
@@ -101,8 +100,26 @@ public class WeatherActivityLiveWeatherTest {
                 .check(matches(isEnabled()))
                 .perform(click());
 
-        intended(hasComponent(WeatherInsightsActivity.class.getName()));
-        intended(hasExtra(WeatherInsightsActivity.EXTRA_CITY_NAME, cityName));
-        intended(not(hasExtra(WeatherInsightsActivity.EXTRA_WEATHER_JSON, "")));
+        Assert.assertTrue(
+                "Expected WeatherInsightsActivity launch intent for city " + cityName,
+                hasWeatherInsightsLaunch(cityName, Intents.getIntents()));
+    }
+
+    private static boolean hasWeatherInsightsLaunch(String expectedCityName, List<Intent> intents) {
+        for (Intent sentIntent : intents) {
+            if (sentIntent == null || sentIntent.getComponent() == null) {
+                continue;
+            }
+            String className = sentIntent.getComponent().getClassName();
+            if (!WeatherInsightsActivity.class.getName().equals(className)) {
+                continue;
+            }
+            String sentCity = sentIntent.getStringExtra(WeatherInsightsActivity.EXTRA_CITY_NAME);
+            String weatherJson = sentIntent.getStringExtra(WeatherInsightsActivity.EXTRA_WEATHER_JSON);
+            if (expectedCityName.equals(sentCity) && weatherJson != null && !weatherJson.isEmpty()) {
+                return true;
+            }
+        }
+        return false;
     }
 }

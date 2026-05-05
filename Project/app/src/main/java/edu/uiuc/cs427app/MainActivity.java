@@ -64,14 +64,11 @@ public class MainActivity extends AppCompatActivity {
             throw new RuntimeException("cityContainer is null - check activity_main.xml");
         }
 
-        boolean testBypass = getIntent().getBooleanExtra("TEST_BYPASS_GEOCODER", false);
         Button buttonNew = findViewById(R.id.buttonAddLocation);
         buttonNew.setOnClickListener(v -> {
             Intent intent = new Intent(this, AddCityActivity.class);
             intent.putExtra("username", currentUsername);
             intent.putExtra(ThemeContract.EXTRA_THEME_JSON, currentTheme);
-            // propagate test bypass flag so instrumentation tests can skip geocoder validation
-            intent.putExtra("TEST_BYPASS_GEOCODER", testBypass);
             startActivity(intent);
         });
 
