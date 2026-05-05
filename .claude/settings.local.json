@@ -1,9 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "Bash(./gradlew dependencies *)",
-      "Bash(./gradlew :app:dependencies --configuration debugAndroidTestRuntimeClasspath)",
-      "Bash(./gradlew assembleDebugAndroidTest)"
-    ]
-  }
-}
