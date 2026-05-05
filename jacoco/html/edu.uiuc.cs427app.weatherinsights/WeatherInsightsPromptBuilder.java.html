@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>WeatherInsightsPromptBuilder.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">app</a> &gt; <a href="index.source.html" class="el_package">edu.uiuc.cs427app.weatherinsights</a> &gt; <span class="el_source">WeatherInsightsPromptBuilder.java</span></div><h1>WeatherInsightsPromptBuilder.java</h1><pre class="source lang-java linenums">package edu.uiuc.cs427app.weatherinsights;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
+/**
+ * Builds prompts and schemas for Weather Insights LLM calls.
+ */
+public final class WeatherInsightsPromptBuilder {
+
+    /**
+     * Utility class.
+     */
+    private WeatherInsightsPromptBuilder() {
+    }
+
+    /**
+     * Builds the prompt for dynamic question suggestions.
+     */
+    public static String generateQuestions(WeatherData weatherData) {
+<span class="nc" id="L22">        return &quot;You are helping a user make practical decisions for their day.\n&quot;</span>
+                + &quot;Use ONLY this weather data:\n&quot;
+<span class="nc" id="L24">                + weatherData.toPromptBlock() + &quot;\n\n&quot;</span>
+                + &quot;Generate 2 to 4 practical, weather-specific questions.\n&quot;
+                + &quot;Questions must depend on this weather data and be useful for daily planning.\n&quot;
+                + &quot;Avoid generic filler.\n&quot;
+                + &quot;Return ONLY valid JSON with exactly this shape and no markdown:\n&quot;
+                + &quot;{\&quot;questions\&quot;:[\&quot;...\&quot;,\&quot;...\&quot;]}&quot;;
+    }
+
+    /**
+     * Builds the prompt for an answer to a selected question.
+     */
+    public static String generateAnswer(WeatherData weatherData, String question) {
+<span class="nc" id="L36">        return &quot;You are helping a user with weather-based advice.\n&quot;</span>
+                + &quot;Use ONLY this weather data:\n&quot;
+<span class="nc" id="L38">                + weatherData.toPromptBlock() + &quot;\n\n&quot;</span>
+                + &quot;User question: &quot; + question + &quot;\n&quot;
+                + &quot;Answer briefly, practically, and in user-friendly plain text.\n&quot;
+                + &quot;Do not make claims not supported by the provided weather data.\n&quot;
+                + &quot;Do not use markdown or extra formatting.&quot;;
+    }
+
+    /**
+     * Builds the JSON schema expected from question generation.
+     */
+    public static JSONObject questionsJsonSchema() throws JSONException {
+<span class="nc" id="L49">        JSONObject schema = new JSONObject();</span>
+<span class="nc" id="L50">        schema.put(&quot;type&quot;, &quot;object&quot;);</span>
+<span class="nc" id="L51">        schema.put(&quot;additionalProperties&quot;, false);</span>
+<span class="nc" id="L52">        schema.put(&quot;required&quot;, new JSONArray().put(&quot;questions&quot;));</span>
+
+<span class="nc" id="L54">        JSONObject questionsProperty = new JSONObject();</span>
+<span class="nc" id="L55">        questionsProperty.put(&quot;type&quot;, &quot;array&quot;);</span>
+<span class="nc" id="L56">        questionsProperty.put(&quot;minItems&quot;, 2);</span>
+<span class="nc" id="L57">        questionsProperty.put(&quot;maxItems&quot;, 4);</span>
+<span class="nc" id="L58">        questionsProperty.put(&quot;uniqueItems&quot;, true);</span>
+<span class="nc" id="L59">        questionsProperty.put(&quot;items&quot;, new JSONObject()</span>
+<span class="nc" id="L60">                .put(&quot;type&quot;, &quot;string&quot;)</span>
+<span class="nc" id="L61">                .put(&quot;minLength&quot;, 1));</span>
+
+<span class="nc" id="L63">        JSONObject properties = new JSONObject();</span>
+<span class="nc" id="L64">        properties.put(&quot;questions&quot;, questionsProperty);</span>
+<span class="nc" id="L65">        schema.put(&quot;properties&quot;, properties);</span>
+
+<span class="nc" id="L67">        return schema;</span>
+    }
+}
+
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

@@ -1,0 +1,237 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>MainActivity.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">app</a> &gt; <a href="index.source.html" class="el_package">edu.uiuc.cs427app</a> &gt; <span class="el_source">MainActivity.java</span></div><h1>MainActivity.java</h1><pre class="source lang-java linenums">package edu.uiuc.cs427app;
+import edu.uiuc.cs427app.BuildConfig;
+
+import android.content.Intent;
+import android.os.Bundle;
+import android.view.View;
+import android.widget.Button;
+import android.widget.TextView;
+import android.widget.LinearLayout;
+
+import androidx.appcompat.app.AppCompatActivity;
+import java.util.ArrayList;
+
+import org.json.JSONArray;
+import org.json.JSONObject;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
+import edu.uiuc.cs427app.theme.ThemeContract;
+import edu.uiuc.cs427app.theme.ThemeDefaults;
+import edu.uiuc.cs427app.theme.ThemeManager;
+import edu.uiuc.cs427app.theme.ThemeParser;
+import edu.uiuc.cs427app.theme.ThemePromptBuilder;
+import edu.uiuc.cs427app.theme.ThemeSpec;
+
+<span class="fc" id="L31">public class MainActivity extends AppCompatActivity {</span>
+
+    private String currentUsername;
+    private String currentPrompt;
+    private View hider;
+<span class="fc" id="L36">    private final ExecutorService executor = Executors.newSingleThreadExecutor();</span>
+    private DatabaseHelper databaseHelper;
+<span class="fc" id="L38">    private ThemeSpec activeTheme = ThemeDefaults.defaultTheme();</span>
+
+    private LinearLayout cityContainer;
+
+<span class="fc" id="L42">    private String currentTheme = &quot;&quot;;</span>
+
+    /** Restores the active user and applies the current theme. */
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+<span class="fc" id="L47">        super.onCreate(savedInstanceState);</span>
+<span class="fc" id="L48">        setContentView(R.layout.activity_main);</span>
+
+<span class="fc" id="L50">        currentUsername = getIntent().getStringExtra(&quot;username&quot;);</span>
+<span class="fc" id="L51">        currentPrompt = getIntent().getStringExtra(ThemeContract.EXTRA_THEME_PROMPT);</span>
+<span class="pc bpc" id="L52" title="2 of 4 branches missed.">        if (currentUsername == null || currentPrompt == null) {</span>
+<span class="nc" id="L53">            navigateToLogin();</span>
+<span class="nc" id="L54">            return;</span>
+        }
+
+<span class="fc" id="L57">        databaseHelper = new DatabaseHelper(this);</span>
+
+<span class="fc" id="L59">        TextView titleView = findViewById(R.id.textViewTitle);</span>
+<span class="fc" id="L60">        titleView.setText(&quot;Team 304 - &quot; + currentUsername);</span>
+
+<span class="fc" id="L62">        cityContainer = findViewById(R.id.cityContainer);</span>
+<span class="pc bpc" id="L63" title="1 of 2 branches missed.">        if (cityContainer == null) {</span>
+<span class="nc" id="L64">            throw new RuntimeException(&quot;cityContainer is null - check activity_main.xml&quot;);</span>
+        }
+
+<span class="fc" id="L67">        Button buttonNew = findViewById(R.id.buttonAddLocation);</span>
+<span class="fc" id="L68">        buttonNew.setOnClickListener(v -&gt; {</span>
+<span class="fc" id="L69">            Intent intent = new Intent(this, AddCityActivity.class);</span>
+<span class="fc" id="L70">            intent.putExtra(&quot;username&quot;, currentUsername);</span>
+<span class="fc" id="L71">            intent.putExtra(ThemeContract.EXTRA_THEME_JSON, currentTheme);</span>
+<span class="fc" id="L72">            startActivity(intent);</span>
+<span class="fc" id="L73">        });</span>
+
+<span class="fc" id="L75">        Button buttonLogout = findViewById(R.id.buttonLogout);</span>
+<span class="fc" id="L76">        buttonLogout.setOnClickListener(new View.OnClickListener() {</span>
+            @Override
+            public void onClick(View v) {
+<span class="fc" id="L79">                navigateToLogin();</span>
+<span class="fc" id="L80">            }</span>
+        });
+
+<span class="fc" id="L83">        hider = findViewById(android.R.id.content);</span>
+<span class="fc" id="L84">        hider.setVisibility(View.INVISIBLE);</span>
+<span class="fc" id="L85">        applyResolvedTheme();</span>
+<span class="fc" id="L86">    }</span>
+
+    /** Applies theme when returning to main activity **/
+    @Override
+    protected void onResume() {
+<span class="fc" id="L91">        super.onResume();</span>
+<span class="pc bpc" id="L92" title="1 of 2 branches missed.">        if (databaseHelper == null) return;</span>
+<span class="fc" id="L93">        loadCities();</span>
+<span class="fc" id="L94">        ThemeManager.applyTheme(this, activeTheme);</span>
+<span class="fc" id="L95">    }</span>
+
+    /** Loads all buttons for an added city like weather and map **/
+    private void loadCities() {
+<span class="fc" id="L99">        cityContainer.removeAllViews();</span>
+
+<span class="fc" id="L101">        ArrayList&lt;String&gt; cities = databaseHelper.getCitiesForUser(currentUsername);</span>
+
+<span class="fc bfc" id="L103" title="All 2 branches covered.">        for (String city : cities) {</span>
+<span class="fc" id="L104">            LinearLayout row = new LinearLayout(this);</span>
+<span class="fc" id="L105">            row.setOrientation(LinearLayout.HORIZONTAL);</span>
+<span class="fc" id="L106">            row.setPadding(12, 12, 12, 12);</span>
+
+<span class="fc" id="L108">            TextView cityName = new TextView(this);</span>
+<span class="fc" id="L109">            cityName.setText(city);</span>
+<span class="fc" id="L110">            cityName.setLayoutParams(new LinearLayout.LayoutParams(</span>
+                    0,
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    1
+            ));
+
+<span class="fc" id="L116">            Button mapButton = new Button(this);</span>
+<span class="fc" id="L117">            mapButton.setText(&quot;Map&quot;);</span>
+<span class="fc" id="L118">            mapButton.setOnClickListener(v -&gt; {</span>
+<span class="nc" id="L119">                Intent intent = new Intent(MainActivity.this, MapActivity.class);</span>
+<span class="nc" id="L120">                intent.putExtra(&quot;city&quot;, city);</span>
+<span class="nc" id="L121">                intent.putExtra(ThemeContract.EXTRA_THEME_JSON, currentTheme);</span>
+<span class="nc" id="L122">                startActivity(intent);</span>
+<span class="nc" id="L123">            });</span>
+<span class="fc" id="L124">            Button weatherButton = new Button(this);</span>
+<span class="fc" id="L125">            weatherButton.setText(R.string.weather_screen_title);</span>
+<span class="pc" id="L126">            weatherButton.setOnClickListener(v -&gt; openWeatherScreen(city));</span>
+
+<span class="fc" id="L128">            Button removeButton = new Button(this);</span>
+<span class="fc" id="L129">            removeButton.setText(&quot;Remove&quot;);</span>
+<span class="fc" id="L130">            removeButton.setOnClickListener(v -&gt; {</span>
+<span class="fc" id="L131">                databaseHelper.removeCityForUser(currentUsername, city);</span>
+<span class="fc" id="L132">                loadCities();</span>
+<span class="fc" id="L133">                ThemeManager.applyTheme(this, activeTheme);</span>
+<span class="fc" id="L134">            });</span>
+
+<span class="fc" id="L136">            row.addView(cityName);</span>
+<span class="fc" id="L137">            row.addView(mapButton);</span>
+<span class="fc" id="L138">            row.addView(weatherButton);</span>
+<span class="fc" id="L139">            row.addView(removeButton);</span>
+<span class="fc" id="L140">            cityContainer.addView(row);</span>
+<span class="fc" id="L141">        }</span>
+<span class="fc" id="L142">    }</span>
+
+    /**
+     * Opens {@link WeatherActivity} for the specified city. The city name originates from
+     * the database list for the current user and is passed as {@link WeatherActivity#EXTRA_CITY}.
+     *
+     * @param city city label associated with the selected row
+     */
+    private void openWeatherScreen(String city) {
+<span class="nc" id="L151">        Intent intent = new Intent(this, WeatherActivity.class);</span>
+<span class="nc" id="L152">        intent.putExtra(WeatherActivity.EXTRA_CITY, city);</span>
+<span class="nc" id="L153">        intent.putExtra(ThemeContract.EXTRA_THEME_JSON, currentTheme);</span>
+<span class="nc" id="L154">        startActivity(intent);</span>
+<span class="nc" id="L155">    }</span>
+
+    /** Applies a validated theme, or the default theme when generation fails. */
+    private void applyResolvedTheme() {
+<span class="fc" id="L159">        String cachedJson = getIntent().getStringExtra(ThemeContract.EXTRA_THEME_JSON);</span>
+<span class="pc bpc" id="L160" title="2 of 4 branches missed.">        if (cachedJson != null &amp;&amp; !cachedJson.isEmpty()) {</span>
+<span class="fc" id="L161">            currentTheme = cachedJson;</span>
+<span class="fc" id="L162">            activeTheme = ThemeParser.parseThemeJsonOrDefault(cachedJson);</span>
+<span class="fc" id="L163">            ThemeManager.applyTheme(this, activeTheme);</span>
+<span class="fc" id="L164">            hider.setVisibility(View.VISIBLE);</span>
+<span class="fc" id="L165">            return;</span>
+        }
+
+<span class="nc" id="L168">        executor.execute(() -&gt; {</span>
+            try {
+<span class="nc" id="L170">                String themeJson = jsonRequest(currentPrompt);</span>
+<span class="nc" id="L171">                ThemeSpec theme = ThemeParser.parseThemeJsonOrDefault(themeJson);</span>
+
+<span class="nc" id="L173">                runOnUiThread(() -&gt; {</span>
+                    try {
+<span class="nc" id="L175">                        currentTheme = themeJson;</span>
+<span class="nc" id="L176">                        activeTheme = theme;</span>
+<span class="nc" id="L177">                        ThemeManager.applyTheme(this, activeTheme);</span>
+<span class="nc" id="L178">                        databaseHelper.updateThemeJson(currentUsername, themeJson);</span>
+<span class="nc" id="L179">                    } catch (Throwable uiThrowable) {</span>
+<span class="nc" id="L180">                        activeTheme = ThemeDefaults.defaultTheme();</span>
+<span class="nc" id="L181">                        ThemeManager.applyTheme(this, activeTheme);</span>
+<span class="nc" id="L182">                    }</span>
+<span class="nc" id="L183">                    hider.setVisibility(View.VISIBLE);</span>
+<span class="nc" id="L184">                });</span>
+<span class="nc" id="L185">            } catch (Throwable throwable) {</span>
+<span class="nc" id="L186">                runOnUiThread(() -&gt; {</span>
+<span class="nc" id="L187">                    activeTheme = ThemeDefaults.defaultTheme();</span>
+<span class="nc" id="L188">                    ThemeManager.applyTheme(this, activeTheme);</span>
+<span class="nc" id="L189">                    hider.setVisibility(View.VISIBLE);</span>
+<span class="nc" id="L190">                });</span>
+<span class="nc" id="L191">            }</span>
+<span class="nc" id="L192">        });</span>
+<span class="nc" id="L193">    }</span>
+
+    /** Sends reqeuest to get user theme from Gemini response **/
+    private String jsonRequest(String input) throws Exception {
+<span class="nc" id="L197">        JSONObject body = new JSONObject().put(&quot;contents&quot;, new JSONArray().put(new JSONObject().put(&quot;parts&quot;, new JSONArray().put(</span>
+<span class="nc" id="L198">                new JSONObject().put(&quot;text&quot;, ThemePromptBuilder.buildUserPrompt(input)))))).put(&quot;generationConfig&quot;, new JSONObject()</span>
+<span class="nc" id="L199">                .put(&quot;responseMimeType&quot;, &quot;application/json&quot;).put(&quot;responseJsonSchema&quot;, ThemePromptBuilder.buildJsonSchema()));</span>
+
+<span class="nc" id="L201">        HttpURLConnection connection = (HttpURLConnection) new URL(&quot;https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent&quot;).openConnection();</span>
+<span class="nc" id="L202">        connection.setRequestMethod(&quot;POST&quot;);</span>
+<span class="nc" id="L203">        connection.setRequestProperty(&quot;Content-Type&quot;, &quot;application/json&quot;);</span>
+<span class="nc" id="L204">        connection.setRequestProperty(&quot;x-goog-api-key&quot;, BuildConfig.GEMINI_KEY);</span>
+<span class="nc" id="L205">        connection.setDoOutput(true);</span>
+
+<span class="nc" id="L207">        connection.getOutputStream().write(body.toString().getBytes(StandardCharsets.UTF_8));</span>
+<span class="nc" id="L208">        BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream(), StandardCharsets.UTF_8));</span>
+<span class="nc" id="L209">        StringBuilder builder = new StringBuilder();</span>
+<span class="nc bnc" id="L210" title="All 2 branches missed.">        for (String line; (line = reader.readLine()) != null; ) builder.append(line.trim());</span>
+
+<span class="nc" id="L212">        JSONObject responseJson = new JSONObject(builder.toString());</span>
+<span class="nc" id="L213">        JSONArray candidates = responseJson.getJSONArray(&quot;candidates&quot;);</span>
+<span class="nc" id="L214">        JSONObject firstCandidate = candidates.getJSONObject(0);</span>
+<span class="nc" id="L215">        JSONObject content = firstCandidate.getJSONObject(&quot;content&quot;);</span>
+<span class="nc" id="L216">        JSONArray parts = content.getJSONArray(&quot;parts&quot;);</span>
+<span class="nc" id="L217">        String theme = parts.getJSONObject(0).getString(&quot;text&quot;);</span>
+
+<span class="nc" id="L219">        return theme;</span>
+    }
+
+    /** Returns to login page when logging out **/
+    private void navigateToLogin() {
+<span class="fc" id="L224">        Intent intent = new Intent(MainActivity.this, LoginActivity.class);</span>
+<span class="fc" id="L225">        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);</span>
+<span class="fc" id="L226">        startActivity(intent);</span>
+<span class="fc" id="L227">        finish();</span>
+<span class="fc" id="L228">    }</span>
+
+    /** Teardown when exiting the app **/
+    @Override
+    protected void onDestroy() {
+<span class="fc" id="L233">        super.onDestroy();</span>
+<span class="fc" id="L234">        executor.shutdown();</span>
+<span class="fc" id="L235">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

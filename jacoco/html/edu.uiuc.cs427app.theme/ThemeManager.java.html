@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ThemeManager.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">app</a> &gt; <a href="index.source.html" class="el_package">edu.uiuc.cs427app.theme</a> &gt; <span class="el_source">ThemeManager.java</span></div><h1>ThemeManager.java</h1><pre class="source lang-java linenums">package edu.uiuc.cs427app.theme;
+
+import android.content.res.ColorStateList;
+import android.graphics.Color;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.Button;
+import android.widget.EditText;
+import android.widget.TextView;
+
+import androidx.appcompat.app.AppCompatActivity;
+
+import com.google.android.material.button.MaterialButton;
+import com.google.android.material.textfield.TextInputLayout;
+
+import edu.uiuc.cs427app.R;
+
+/** Applies a validated theme to supported views. */
+public final class ThemeManager {
+
+    /** Utility class. */
+    private ThemeManager() {
+    }
+
+    /** Applies a theme to the activity content view. */
+    public static void applyTheme(AppCompatActivity activity, ThemeSpec themeSpec) {
+<span class="fc" id="L27">        View contentRoot = activity.findViewById(android.R.id.content);</span>
+<span class="pc bpc" id="L28" title="2 of 4 branches missed.">        if (contentRoot instanceof ViewGroup &amp;&amp; ((ViewGroup) contentRoot).getChildCount() &gt; 0) {</span>
+<span class="fc" id="L29">            applyTheme(((ViewGroup) contentRoot).getChildAt(0), themeSpec);</span>
+<span class="fc" id="L30">            return;</span>
+        }
+
+<span class="nc" id="L33">        applyTheme(contentRoot, themeSpec);</span>
+<span class="nc" id="L34">    }</span>
+
+    /** Applies a theme to a root view and its children. */
+    public static void applyTheme(View rootView, ThemeSpec themeSpec) {
+<span class="pc bpc" id="L38" title="2 of 4 branches missed.">        if (rootView == null || themeSpec == null) {</span>
+<span class="nc" id="L39">            return;</span>
+        }
+
+<span class="fc" id="L42">        rootView.setBackgroundColor(Color.parseColor(themeSpec.getBackgroundColor()));</span>
+<span class="fc" id="L43">        applyThemeRecursively(rootView, themeSpec);</span>
+<span class="fc" id="L44">    }</span>
+
+    /** Walks the view tree and updates supported view types. */
+    private static void applyThemeRecursively(View view, ThemeSpec themeSpec) {
+<span class="pc bpc" id="L48" title="1 of 2 branches missed.">        if (isCardContainer(view.getId())) {</span>
+<span class="nc" id="L49">            view.setBackgroundColor(Color.parseColor(themeSpec.getCardColor()));</span>
+        }
+
+<span class="fc bfc" id="L52" title="All 2 branches covered.">        if (view instanceof MaterialButton) {</span>
+<span class="fc" id="L53">            applyMaterialButtonTheme((MaterialButton) view, themeSpec);</span>
+<span class="fc bfc" id="L54" title="All 2 branches covered.">        } else if (view instanceof Button) {</span>
+<span class="fc" id="L55">            applyButtonTheme((Button) view, themeSpec);</span>
+<span class="pc bpc" id="L56" title="1 of 2 branches missed.">        } else if (view instanceof TextInputLayout) {</span>
+<span class="nc" id="L57">            applyInputLayoutTheme((TextInputLayout) view, themeSpec);</span>
+<span class="fc bfc" id="L58" title="All 2 branches covered.">        } else if (view instanceof EditText) {</span>
+<span class="fc" id="L59">            applyEditTextTheme((EditText) view, themeSpec);</span>
+<span class="fc bfc" id="L60" title="All 2 branches covered.">        } else if (view instanceof TextView) {</span>
+<span class="fc" id="L61">            applyTextTheme((TextView) view, themeSpec);</span>
+        }
+
+<span class="fc bfc" id="L64" title="All 2 branches covered.">        if (view instanceof ViewGroup) {</span>
+<span class="fc" id="L65">            ViewGroup viewGroup = (ViewGroup) view;</span>
+<span class="fc bfc" id="L66" title="All 2 branches covered.">            for (int childIndex = 0; childIndex &lt; viewGroup.getChildCount(); childIndex++) {</span>
+<span class="fc" id="L67">                applyThemeRecursively(viewGroup.getChildAt(childIndex), themeSpec);</span>
+            }
+        }
+<span class="fc" id="L70">    }</span>
+
+    /** Applies title and body text colors. */
+    private static void applyTextTheme(TextView textView, ThemeSpec themeSpec) {
+<span class="fc" id="L74">        textView.setTextColor(Color.parseColor(themeSpec.getTextColor()));</span>
+<span class="fc bfc" id="L75" title="All 2 branches covered.">        if (textView.getId() == R.id.textViewTitle) {</span>
+<span class="fc" id="L76">            textView.setBackgroundColor(Color.parseColor(themeSpec.getHeaderColor()));</span>
+        }
+<span class="fc" id="L78">    }</span>
+
+    /** Applies accent colors to a Material button. */
+    private static void applyMaterialButtonTheme(MaterialButton button, ThemeSpec themeSpec) {
+<span class="fc" id="L82">        button.setBackgroundTintList(ColorStateList.valueOf(</span>
+<span class="fc" id="L83">                Color.parseColor(themeSpec.getAccentColor())));</span>
+<span class="fc" id="L84">        button.setTextColor(Color.parseColor(themeSpec.getTextColor()));</span>
+<span class="fc" id="L85">        button.setStrokeColor(ColorStateList.valueOf(</span>
+<span class="fc" id="L86">                Color.parseColor(themeSpec.getBorderColor())));</span>
+<span class="fc" id="L87">    }</span>
+
+    /** Applies accent colors to a plain button. */
+    private static void applyButtonTheme(Button button, ThemeSpec themeSpec) {
+<span class="fc" id="L91">        button.setBackgroundColor(Color.parseColor(themeSpec.getAccentColor()));</span>
+<span class="fc" id="L92">        button.setTextColor(Color.parseColor(themeSpec.getTextColor()));</span>
+<span class="fc" id="L93">    }</span>
+
+    /** Applies border and hint colors to an outlined input. */
+    private static void applyInputLayoutTheme(TextInputLayout inputLayout, ThemeSpec themeSpec) {
+<span class="nc" id="L97">        int borderColor = Color.parseColor(themeSpec.getBorderColor());</span>
+<span class="nc" id="L98">        int textColor = Color.parseColor(themeSpec.getTextColor());</span>
+<span class="nc" id="L99">        inputLayout.setBoxStrokeColor(borderColor);</span>
+<span class="nc" id="L100">        inputLayout.setHintTextColor(ColorStateList.valueOf(textColor));</span>
+<span class="nc" id="L101">        inputLayout.setDefaultHintTextColor(ColorStateList.valueOf(textColor));</span>
+<span class="nc" id="L102">    }</span>
+
+    /** Applies text colors to an editable field. */
+    private static void applyEditTextTheme(EditText editText, ThemeSpec themeSpec) {
+<span class="fc" id="L106">        int textColor = Color.parseColor(themeSpec.getTextColor());</span>
+<span class="fc" id="L107">        editText.setTextColor(textColor);</span>
+<span class="fc" id="L108">        editText.setHintTextColor(textColor);</span>
+<span class="fc" id="L109">    }</span>
+
+    /** Returns true for rows that should use the card color. */
+    private static boolean isCardContainer(int viewId) {
+<span class="fc" id="L113">        return false;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

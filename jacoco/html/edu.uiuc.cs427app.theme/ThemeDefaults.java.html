@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ThemeDefaults.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">app</a> &gt; <a href="index.source.html" class="el_package">edu.uiuc.cs427app.theme</a> &gt; <span class="el_source">ThemeDefaults.java</span></div><h1>ThemeDefaults.java</h1><pre class="source lang-java linenums">package edu.uiuc.cs427app.theme;
+
+/** Provides the fallback theme used when theme data is missing or invalid. */
+public final class ThemeDefaults {
+
+<span class="fc" id="L6">    private static final ThemeSpec DEFAULT_THEME = new ThemeSpec(</span>
+            &quot;#F4EFE6&quot;,
+            &quot;#1F1F1F&quot;,
+            &quot;#2F6B5F&quot;,
+            &quot;#FFF8ED&quot;,
+            &quot;#D8BFA3&quot;,
+            &quot;#BFA27A&quot;,
+            &quot;☀&quot;
+    );
+
+    /** Utility class. */
+    private ThemeDefaults() {
+    }
+
+    /** Returns the default theme spec. */
+    public static ThemeSpec defaultTheme() {
+<span class="fc" id="L22">        return DEFAULT_THEME;</span>
+    }
+
+    /** Returns the default theme as JSON. */
+    public static String defaultThemeJson() {
+<span class="fc" id="L27">        return DEFAULT_THEME.toJsonString();</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>
