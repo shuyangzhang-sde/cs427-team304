@@ -46,9 +46,7 @@ dependencies {
     testImplementation 'junit:junit:4.13.2'
     testImplementation 'org.json:json:20231013'
     androidTestImplementation 'androidx.test.ext:junit:1.1.3'
-    // Keep Espresso artifacts aligned to the same version to avoid runtime Dagger/reflection issues
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.6.1'
     androidTestImplementation 'androidx.test.espresso:espresso-intents:3.6.1'
-    // UI Automator can help with input/event injection compatibility on some emulator/device images
     androidTestImplementation 'androidx.test.uiautomator:uiautomator:2.2.0'
 }
