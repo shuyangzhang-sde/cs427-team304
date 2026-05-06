@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ThemeSpec.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">app</a> &gt; <a href="index.source.html" class="el_package">edu.uiuc.cs427app.theme</a> &gt; <span class="el_source">ThemeSpec.java</span></div><h1>ThemeSpec.java</h1><pre class="source lang-java linenums">package edu.uiuc.cs427app.theme;
+
+import org.json.JSONException;
+import org.json.JSONObject;
+
+/** Immutable theme model used by parsing and UI application. */
+public class ThemeSpec {
+
+    private final String backgroundColor;
+    private final String textColor;
+    private final String accentColor;
+    private final String cardColor;
+    private final String headerColor;
+    private final String borderColor;
+    private final String emojiHint;
+
+    /** Creates a theme with the colors and display hints used by the UI. */
+    public ThemeSpec(String backgroundColor, String textColor, String accentColor,
+                     String cardColor, String headerColor, String borderColor,
+<span class="fc" id="L20">                     String emojiHint) {</span>
+<span class="fc" id="L21">        this.backgroundColor = backgroundColor;</span>
+<span class="fc" id="L22">        this.textColor = textColor;</span>
+<span class="fc" id="L23">        this.accentColor = accentColor;</span>
+<span class="fc" id="L24">        this.cardColor = cardColor;</span>
+<span class="fc" id="L25">        this.headerColor = headerColor;</span>
+<span class="fc" id="L26">        this.borderColor = borderColor;</span>
+<span class="fc" id="L27">        this.emojiHint = emojiHint;</span>
+<span class="fc" id="L28">    }</span>
+
+    /** Returns the background color. */
+    public String getBackgroundColor() {
+<span class="fc" id="L32">        return backgroundColor;</span>
+    }
+
+    /** Returns the primary text color. */
+    public String getTextColor() {
+<span class="fc" id="L37">        return textColor;</span>
+    }
+
+    /** Returns the accent color. */
+    public String getAccentColor() {
+<span class="fc" id="L42">        return accentColor;</span>
+    }
+
+    /** Returns the secondary container color. */
+    public String getCardColor() {
+<span class="fc" id="L47">        return cardColor;</span>
+    }
+
+    /** Returns the header color. */
+    public String getHeaderColor() {
+<span class="fc" id="L52">        return headerColor;</span>
+    }
+
+    /** Returns the border color. */
+    public String getBorderColor() {
+<span class="fc" id="L57">        return borderColor;</span>
+    }
+
+    /** Returns the emoji or icon hint. */
+    public String getEmojiHint() {
+<span class="fc" id="L62">        return emojiHint;</span>
+    }
+
+    /** Serializes the theme into a JSON object. */
+    public JSONObject toJsonObject() throws JSONException {
+<span class="fc" id="L67">        JSONObject jsonObject = new JSONObject();</span>
+<span class="fc" id="L68">        jsonObject.put(&quot;backgroundColor&quot;, backgroundColor);</span>
+<span class="fc" id="L69">        jsonObject.put(&quot;textColor&quot;, textColor);</span>
+<span class="fc" id="L70">        jsonObject.put(&quot;accentColor&quot;, accentColor);</span>
+<span class="fc" id="L71">        jsonObject.put(&quot;cardColor&quot;, cardColor);</span>
+<span class="fc" id="L72">        jsonObject.put(&quot;headerColor&quot;, headerColor);</span>
+<span class="fc" id="L73">        jsonObject.put(&quot;borderColor&quot;, borderColor);</span>
+<span class="fc" id="L74">        jsonObject.put(&quot;emojiHint&quot;, emojiHint);</span>
+<span class="fc" id="L75">        return jsonObject;</span>
+    }
+
+    /** Serializes the theme into a compact JSON string. */
+    public String toJsonString() {
+        try {
+<span class="fc" id="L81">            return toJsonObject().toString();</span>
+<span class="nc" id="L82">        } catch (JSONException exception) {</span>
+<span class="nc" id="L83">            return ThemeDefaults.defaultThemeJson();</span>
+        }
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

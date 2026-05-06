@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>MapActivity.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">app</a> &gt; <a href="index.source.html" class="el_package">edu.uiuc.cs427app</a> &gt; <span class="el_source">MapActivity.java</span></div><h1>MapActivity.java</h1><pre class="source lang-java linenums">package edu.uiuc.cs427app;
+
+import android.os.Bundle;
+import android.widget.TextView;
+
+import androidx.appcompat.app.AppCompatActivity;
+
+import com.google.android.gms.maps.CameraUpdateFactory;
+import com.google.android.gms.maps.GoogleMap;
+import com.google.android.gms.maps.OnMapReadyCallback;
+import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.MarkerOptions;
+
+import edu.uiuc.cs427app.theme.ThemeContract;
+import edu.uiuc.cs427app.theme.ThemeManager;
+import edu.uiuc.cs427app.theme.ThemeParser;
+
+<span class="fc" id="L19">public class MapActivity extends AppCompatActivity implements OnMapReadyCallback {</span>
+
+    String city;
+    double latitude;
+    double longitude;
+
+    //gets city name and coords, and then sets up the map
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+<span class="fc" id="L28">        super.onCreate(savedInstanceState);</span>
+<span class="fc" id="L29">        setContentView(R.layout.activity_map);</span>
+
+<span class="pc bpc" id="L31" title="1 of 2 branches missed.">        if (getSupportActionBar() != null) {</span>
+<span class="fc" id="L32">            getSupportActionBar().setDisplayHomeAsUpEnabled(true);</span>
+        }
+
+<span class="fc" id="L35">        String themeJson = getIntent().getStringExtra(ThemeContract.EXTRA_THEME_JSON);</span>
+<span class="pc bpc" id="L36" title="3 of 4 branches missed.">        if (themeJson != null &amp;&amp; !themeJson.isEmpty()) {</span>
+<span class="nc" id="L37">            ThemeManager.applyTheme(this, ThemeParser.parseThemeJsonOrDefault(themeJson));</span>
+        }
+
+<span class="fc" id="L40">        city = getIntent().getStringExtra(&quot;city&quot;);</span>
+
+<span class="fc" id="L42">        TextView cityName = findViewById(R.id.cityName);</span>
+<span class="fc" id="L43">        TextView coords = findViewById(R.id.cityCoordinates);</span>
+
+<span class="fc" id="L45">        cityName.setText(city);</span>
+
+        //use geocoder like in add city
+<span class="fc" id="L48">        android.location.Geocoder geocoder = new android.location.Geocoder(this);</span>
+
+        try {
+<span class="fc" id="L51">            java.util.List&lt;android.location.Address&gt; list = geocoder.getFromLocationName(city, 1);</span>
+
+<span class="pc bpc" id="L53" title="1 of 4 branches missed.">            if (list != null &amp;&amp; list.size() &gt; 0) {</span>
+<span class="fc" id="L54">                android.location.Address address = list.get(0);</span>
+<span class="fc" id="L55">                latitude = address.getLatitude();</span>
+<span class="fc" id="L56">                longitude = address.getLongitude();</span>
+<span class="fc" id="L57">            } else {</span>
+<span class="fc" id="L58">                latitude = 0;</span>
+<span class="fc" id="L59">                longitude = 0;</span>
+            }
+
+<span class="nc" id="L62">        } catch (Exception e) {</span>
+<span class="nc" id="L63">            latitude = 0;</span>
+<span class="nc" id="L64">            longitude = 0;</span>
+<span class="fc" id="L65">        }</span>
+
+<span class="fc" id="L67">        coords.setText(&quot;Latitude: &quot; + latitude + &quot;, Longitude: &quot; + longitude);</span>
+
+<span class="fc" id="L69">        SupportMapFragment mapFrag = (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map);</span>
+
+<span class="pc bpc" id="L71" title="1 of 2 branches missed.">        if (mapFrag != null) {</span>
+<span class="fc" id="L72">            mapFrag.getMapAsync(this);</span>
+        }
+<span class="fc" id="L74">    }</span>
+
+    //once map loads: add marker, zoom in
+    @Override
+    public void onMapReady(GoogleMap googleMap) {
+        //Toast.makeText(this, &quot;map is ready&quot;, Toast.LENGTH_SHORT).show(); //toast for testing
+
+<span class="fc" id="L81">        googleMap.getUiSettings().setZoomControlsEnabled(true);</span>
+
+<span class="fc" id="L83">        LatLng coord = new LatLng(latitude, longitude);</span>
+
+<span class="fc" id="L85">        googleMap.addMarker(new MarkerOptions().position(coord).title(city));</span>
+<span class="fc" id="L86">        googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(coord, 10));</span>
+<span class="fc" id="L87">    }</span>
+
+    //sends user back to city list when the back arrow is clicked
+    @Override
+    public boolean onSupportNavigateUp() {
+<span class="nc" id="L92">        finish();</span>
+<span class="nc" id="L93">        return true;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

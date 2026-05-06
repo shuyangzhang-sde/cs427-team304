@@ -1,0 +1,197 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>GeminiWeatherInsightsRepository.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">app</a> &gt; <a href="index.source.html" class="el_package">edu.uiuc.cs427app.weatherinsights</a> &gt; <span class="el_source">GeminiWeatherInsightsRepository.java</span></div><h1>GeminiWeatherInsightsRepository.java</h1><pre class="source lang-java linenums">package edu.uiuc.cs427app.weatherinsights;
+
+import android.os.Handler;
+import android.os.Looper;
+import android.util.Log;
+
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
+/**
+ * Gemini-backed repository implementation for Weather Insights.
+ */
+public class GeminiWeatherInsightsRepository implements WeatherInsightsRepository {
+
+    private static final String TAG = &quot;WeatherInsightsRepo&quot;;
+
+    private final GeminiApiClient geminiApiClient;
+    private final ExecutorService executorService;
+    private final Handler callbackHandler;
+
+    /**
+     * Creates a repository with default Gemini client and single background worker.
+     */
+    public GeminiWeatherInsightsRepository() {
+<span class="nc" id="L29">        this(new GeminiApiClient(), Executors.newSingleThreadExecutor(), defaultMainHandler());</span>
+<span class="nc" id="L30">    }</span>
+
+    /**
+     * Creates a repository with injected dependencies.
+     */
+    public GeminiWeatherInsightsRepository(
+            GeminiApiClient geminiApiClient,
+            ExecutorService executorService
+    ) {
+<span class="nc" id="L39">        this(geminiApiClient, executorService, defaultMainHandler());</span>
+<span class="nc" id="L40">    }</span>
+
+    /**
+     * Creates a repository with injected dependencies and callback handler.
+     */
+    public GeminiWeatherInsightsRepository(
+            GeminiApiClient geminiApiClient,
+            ExecutorService executorService,
+            Handler callbackHandler
+<span class="nc" id="L49">    ) {</span>
+<span class="nc" id="L50">        this.geminiApiClient = geminiApiClient;</span>
+<span class="nc" id="L51">        this.executorService = executorService;</span>
+<span class="nc" id="L52">        this.callbackHandler = callbackHandler;</span>
+<span class="nc" id="L53">    }</span>
+
+    /**
+     * Generates dynamic suggested questions using the provided weather data.
+     */
+    @Override
+    public List&lt;String&gt; generateQuestions(WeatherData weatherData) throws WeatherInsightsException {
+<span class="nc" id="L60">        requireCompleteWeatherData(weatherData);</span>
+
+        try {
+<span class="nc" id="L63">            JSONObject generationConfig = new JSONObject();</span>
+<span class="nc" id="L64">            generationConfig.put(&quot;responseMimeType&quot;, &quot;application/json&quot;);</span>
+<span class="nc" id="L65">            generationConfig.put(&quot;responseJsonSchema&quot;, WeatherInsightsPromptBuilder.questionsJsonSchema());</span>
+
+<span class="nc" id="L67">            String prompt = WeatherInsightsPromptBuilder.generateQuestions(weatherData);</span>
+<span class="nc" id="L68">            String rawResponse = geminiApiClient.generateContent(prompt, generationConfig);</span>
+<span class="nc" id="L69">            return WeatherInsightsParser.parseQuestions(rawResponse);</span>
+<span class="nc" id="L70">        } catch (JSONException jsonException) {</span>
+<span class="nc" id="L71">            throw new WeatherInsightsException(</span>
+                    &quot;Failed to build question-generation request.&quot;, jsonException);
+        }
+    }
+
+    /**
+     * Generates a dynamic answer for a selected weather question.
+     */
+    @Override
+    public String generateAnswer(WeatherData weatherData, String question) throws WeatherInsightsException {
+<span class="nc" id="L81">        requireCompleteWeatherData(weatherData);</span>
+<span class="nc" id="L82">        String normalizedQuestion = normalizeQuestion(question);</span>
+
+        try {
+<span class="nc" id="L85">            JSONObject generationConfig = new JSONObject();</span>
+<span class="nc" id="L86">            generationConfig.put(&quot;responseMimeType&quot;, &quot;text/plain&quot;);</span>
+
+<span class="nc" id="L88">            String prompt = WeatherInsightsPromptBuilder.generateAnswer(</span>
+                    weatherData,
+                    normalizedQuestion
+            );
+<span class="nc" id="L92">            String rawResponse = geminiApiClient.generateContent(prompt, generationConfig);</span>
+<span class="nc" id="L93">            return WeatherInsightsParser.parseAnswer(rawResponse);</span>
+<span class="nc" id="L94">        } catch (JSONException jsonException) {</span>
+<span class="nc" id="L95">            throw new WeatherInsightsException(</span>
+                    &quot;Failed to build answer-generation request.&quot;, jsonException);
+        }
+    }
+
+    /**
+     * Runs question generation asynchronously.
+     */
+    @Override
+    public void generateQuestionsAsync(
+            WeatherData weatherData,
+            WeatherInsightsCallback&lt;List&lt;String&gt;&gt; callback
+    ) {
+<span class="nc bnc" id="L108" title="All 2 branches missed.">        if (callback == null) {</span>
+<span class="nc" id="L109">            Log.w(TAG, &quot;generateQuestionsAsync called with null callback.&quot;);</span>
+<span class="nc" id="L110">            return;</span>
+        }
+
+<span class="nc" id="L113">        executorService.execute(() -&gt; {</span>
+            try {
+<span class="nc" id="L115">                List&lt;String&gt; result = generateQuestions(weatherData);</span>
+<span class="nc" id="L116">                dispatch(() -&gt; callback.onSuccess(result));</span>
+<span class="nc" id="L117">            } catch (WeatherInsightsException exception) {</span>
+<span class="nc" id="L118">                Log.w(TAG, &quot;Question generation failed.&quot;, exception);</span>
+<span class="nc" id="L119">                dispatch(() -&gt; callback.onError(exception));</span>
+<span class="nc" id="L120">            }</span>
+<span class="nc" id="L121">        });</span>
+<span class="nc" id="L122">    }</span>
+
+    /**
+     * Runs answer generation asynchronously.
+     */
+    @Override
+    public void generateAnswerAsync(
+            WeatherData weatherData,
+            String question,
+            WeatherInsightsCallback&lt;String&gt; callback
+    ) {
+<span class="nc bnc" id="L133" title="All 2 branches missed.">        if (callback == null) {</span>
+<span class="nc" id="L134">            Log.w(TAG, &quot;generateAnswerAsync called with null callback.&quot;);</span>
+<span class="nc" id="L135">            return;</span>
+        }
+
+<span class="nc" id="L138">        executorService.execute(() -&gt; {</span>
+            try {
+<span class="nc" id="L140">                String result = generateAnswer(weatherData, question);</span>
+<span class="nc" id="L141">                dispatch(() -&gt; callback.onSuccess(result));</span>
+<span class="nc" id="L142">            } catch (WeatherInsightsException exception) {</span>
+<span class="nc" id="L143">                Log.w(TAG, &quot;Answer generation failed.&quot;, exception);</span>
+<span class="nc" id="L144">                dispatch(() -&gt; callback.onError(exception));</span>
+<span class="nc" id="L145">            }</span>
+<span class="nc" id="L146">        });</span>
+<span class="nc" id="L147">    }</span>
+
+    /**
+     * Stops background execution for this repository.
+     */
+    @Override
+    public void shutdown() {
+<span class="nc" id="L154">        executorService.shutdown();</span>
+<span class="nc" id="L155">    }</span>
+
+    /**
+     * Validates that all required weather fields are present.
+     */
+    private void requireCompleteWeatherData(WeatherData weatherData) throws WeatherInsightsException {
+<span class="nc bnc" id="L161" title="All 4 branches missed.">        if (weatherData == null || !weatherData.isComplete()) {</span>
+<span class="nc" id="L162">            throw new WeatherInsightsException(</span>
+                    &quot;Weather data is incomplete. city/time/temperature/condition/humidity/wind are required.&quot;);
+        }
+<span class="nc" id="L165">    }</span>
+
+    /**
+     * Normalizes and validates the selected question string.
+     */
+    private String normalizeQuestion(String question) throws WeatherInsightsException {
+<span class="nc bnc" id="L171" title="All 2 branches missed.">        String normalized = question == null ? &quot;&quot; : question.trim();</span>
+<span class="nc bnc" id="L172" title="All 2 branches missed.">        if (normalized.isEmpty()) {</span>
+<span class="nc" id="L173">            throw new WeatherInsightsException(&quot;Selected question cannot be blank.&quot;);</span>
+        }
+<span class="nc" id="L175">        return normalized;</span>
+    }
+
+    /**
+     * Dispatches callback work to the configured callback handler when available.
+     */
+    private void dispatch(Runnable runnable) {
+<span class="nc bnc" id="L182" title="All 2 branches missed.">        if (callbackHandler == null) {</span>
+<span class="nc" id="L183">            runnable.run();</span>
+<span class="nc" id="L184">            return;</span>
+        }
+<span class="nc" id="L186">        callbackHandler.post(runnable);</span>
+<span class="nc" id="L187">    }</span>
+
+    /**
+     * Returns a main-thread handler when the main looper is available.
+     */
+    private static Handler defaultMainHandler() {
+<span class="nc" id="L193">        Looper mainLooper = Looper.getMainLooper();</span>
+<span class="nc bnc" id="L194" title="All 2 branches missed.">        return mainLooper != null ? new Handler(mainLooper) : null;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

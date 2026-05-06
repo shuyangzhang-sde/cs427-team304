@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ThemeParser.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">app</a> &gt; <a href="index.source.html" class="el_package">edu.uiuc.cs427app.theme</a> &gt; <span class="el_source">ThemeParser.java</span></div><h1>ThemeParser.java</h1><pre class="source lang-java linenums">package edu.uiuc.cs427app.theme;
+
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.util.regex.Pattern;
+
+/** Parses and validates structured theme JSON. */
+public final class ThemeParser {
+
+<span class="fc" id="L11">    private static final Pattern HEX_COLOR_PATTERN = Pattern.compile(&quot;^#[0-9A-Fa-f]{6}$&quot;);</span>
+
+    /** Utility class. */
+    private ThemeParser() {
+    }
+
+    /** Parses theme JSON and returns null when validation fails. */
+    public static ThemeSpec parseThemeJson(String rawThemeJson) {
+<span class="pc bpc" id="L19" title="2 of 4 branches missed.">        if (rawThemeJson == null || rawThemeJson.trim().isEmpty()) {</span>
+<span class="nc" id="L20">            return null;</span>
+        }
+
+        try {
+<span class="fc" id="L24">            JSONObject jsonObject = new JSONObject(rawThemeJson);</span>
+<span class="fc" id="L25">            ThemeSpec defaults = ThemeDefaults.defaultTheme();</span>
+
+<span class="fc" id="L27">            String backgroundColor = readRequiredColor(jsonObject, &quot;backgroundColor&quot;);</span>
+<span class="fc" id="L28">            String textColor = readRequiredColor(jsonObject, &quot;textColor&quot;);</span>
+<span class="fc" id="L29">            String accentColor = readOptionalColor(jsonObject, &quot;accentColor&quot;, defaults.getAccentColor());</span>
+<span class="fc" id="L30">            String cardColor = readOptionalColor(jsonObject, &quot;cardColor&quot;, defaults.getCardColor());</span>
+<span class="fc" id="L31">            String headerColor = readOptionalColor(jsonObject, &quot;headerColor&quot;, defaults.getHeaderColor());</span>
+<span class="fc" id="L32">            String borderColor = readOptionalColor(jsonObject, &quot;borderColor&quot;, defaults.getBorderColor());</span>
+<span class="fc" id="L33">            String emojiHint = jsonObject.optString(&quot;emojiHint&quot;, defaults.getEmojiHint()).trim();</span>
+
+<span class="pc bpc" id="L35" title="6 of 12 branches missed.">            if (backgroundColor == null || textColor == null || accentColor == null</span>
+                    || cardColor == null || headerColor == null || borderColor == null) {
+<span class="nc" id="L37">                return null;</span>
+            }
+
+<span class="pc bpc" id="L40" title="1 of 2 branches missed.">            if (emojiHint.isEmpty()) {</span>
+<span class="nc" id="L41">                emojiHint = defaults.getEmojiHint();</span>
+            }
+
+<span class="fc" id="L44">            return new ThemeSpec(backgroundColor, textColor, accentColor,</span>
+                    cardColor, headerColor, borderColor, emojiHint);
+<span class="nc" id="L46">        } catch (JSONException exception) {</span>
+<span class="nc" id="L47">            return null;</span>
+        }
+    }
+
+    /** Parses theme JSON and falls back to the default theme on failure. */
+    public static ThemeSpec parseThemeJsonOrDefault(String rawThemeJson) {
+<span class="fc" id="L53">        ThemeSpec parsedTheme = parseThemeJson(rawThemeJson);</span>
+<span class="pc bpc" id="L54" title="1 of 2 branches missed.">        return parsedTheme != null ? parsedTheme : ThemeDefaults.defaultTheme();</span>
+    }
+
+    /** Reads a required color field. */
+    private static String readRequiredColor(JSONObject jsonObject, String key) {
+<span class="fc" id="L59">        String color = jsonObject.optString(key, &quot;&quot;).trim();</span>
+<span class="pc bpc" id="L60" title="1 of 2 branches missed.">        return isValidHexColor(color) ? color.toUpperCase() : null;</span>
+    }
+
+    /** Reads an optional color field or returns a default value. */
+    private static String readOptionalColor(JSONObject jsonObject, String key, String defaultColor) {
+<span class="pc bpc" id="L65" title="1 of 2 branches missed.">        if (!jsonObject.has(key)) {</span>
+<span class="nc" id="L66">            return defaultColor;</span>
+        }
+
+<span class="fc" id="L69">        String color = jsonObject.optString(key, &quot;&quot;).trim();</span>
+<span class="pc bpc" id="L70" title="1 of 2 branches missed.">        return isValidHexColor(color) ? color.toUpperCase() : null;</span>
+    }
+
+    /** Checks whether a string matches #RRGGBB. */
+    private static boolean isValidHexColor(String color) {
+<span class="pc bpc" id="L75" title="2 of 4 branches missed.">        return color != null &amp;&amp; HEX_COLOR_PATTERN.matcher(color).matches();</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

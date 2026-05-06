@@ -1,0 +1,155 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AddCityActivity.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">app</a> &gt; <a href="index.source.html" class="el_package">edu.uiuc.cs427app</a> &gt; <span class="el_source">AddCityActivity.java</span></div><h1>AddCityActivity.java</h1><pre class="source lang-java linenums">package edu.uiuc.cs427app;
+
+import android.location.Address;
+import android.location.Geocoder;
+import android.os.Bundle;
+import android.widget.Button;
+import android.widget.EditText;
+import android.widget.Toast;
+
+import androidx.appcompat.app.AppCompatActivity;
+
+import java.io.IOException;
+import java.util.List;
+import java.util.Locale;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
+import edu.uiuc.cs427app.theme.ThemeContract;
+import edu.uiuc.cs427app.theme.ThemeDefaults;
+import edu.uiuc.cs427app.theme.ThemeManager;
+import edu.uiuc.cs427app.theme.ThemeParser;
+import edu.uiuc.cs427app.theme.ThemePromptBuilder;
+import edu.uiuc.cs427app.theme.ThemeSpec;
+
+<span class="fc" id="L25">public class AddCityActivity extends AppCompatActivity {</span>
+
+    private EditText editTextCityName;
+    private Button buttonSaveCity;
+    private Button buttonCancel;
+    private String currentUsername;
+    private DatabaseHelper databaseHelper;
+    private boolean bypassGeocoder;
+<span class="fc" id="L33">    private final ExecutorService executor = Executors.newSingleThreadExecutor();</span>
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+<span class="fc" id="L37">        super.onCreate(savedInstanceState);</span>
+<span class="fc" id="L38">        setContentView(R.layout.activity_add_city);</span>
+
+<span class="fc" id="L40">        String themeJson = getIntent().getStringExtra(ThemeContract.EXTRA_THEME_JSON);</span>
+<span class="pc bpc" id="L41" title="2 of 4 branches missed.">        if (themeJson != null &amp;&amp; !themeJson.isEmpty()) {</span>
+<span class="fc" id="L42">            ThemeManager.applyTheme(this, ThemeParser.parseThemeJsonOrDefault(themeJson));</span>
+        }
+
+<span class="fc" id="L45">        currentUsername = getIntent().getStringExtra(&quot;username&quot;);</span>
+<span class="fc" id="L46">        bypassGeocoder = getIntent().getBooleanExtra(&quot;TEST_BYPASS_GEOCODER&quot;, false);</span>
+<span class="fc" id="L47">        databaseHelper = new DatabaseHelper(this);</span>
+
+<span class="fc" id="L49">        editTextCityName = findViewById(R.id.editTextCityName);</span>
+<span class="fc" id="L50">        buttonSaveCity = findViewById(R.id.buttonSaveCity);</span>
+<span class="fc" id="L51">        buttonCancel = findViewById(R.id.buttonCancel);</span>
+
+<span class="fc" id="L53">        buttonSaveCity.setOnClickListener(v -&gt; saveCity());</span>
+<span class="pc" id="L54">        buttonCancel.setOnClickListener(v -&gt; finish());</span>
+<span class="fc" id="L55">    }</span>
+
+    private void saveCity() {
+<span class="fc" id="L58">        String cityName = properCap(editTextCityName.getText().toString().trim());</span>
+
+<span class="pc bpc" id="L60" title="1 of 2 branches missed.">        if (cityName.isEmpty()) {</span>
+<span class="nc" id="L61">            Toast.makeText(this, &quot;Please enter a city name&quot;, Toast.LENGTH_SHORT).show();</span>
+<span class="nc" id="L62">            return;</span>
+        }
+
+<span class="pc bpc" id="L65" title="1 of 2 branches missed.">        if (databaseHelper.cityExistsForUser(currentUsername, cityName)) {</span>
+<span class="nc" id="L66">            Toast.makeText(this, &quot;City already added&quot;, Toast.LENGTH_SHORT).show();</span>
+<span class="nc" id="L67">            return;</span>
+        }
+
+<span class="fc" id="L70">        buttonSaveCity.setEnabled(false);</span>
+
+<span class="fc" id="L72">        executor.execute(() -&gt; {</span>
+<span class="pc bpc" id="L73" title="3 of 4 branches missed.">            boolean isValid = bypassGeocoder || isValidCity(cityName);</span>
+
+<span class="fc" id="L75">            runOnUiThread(() -&gt; {</span>
+<span class="fc" id="L76">                buttonSaveCity.setEnabled(true);</span>
+
+<span class="pc bpc" id="L78" title="1 of 2 branches missed.">                if (!isValid) {</span>
+<span class="nc" id="L79">                    Toast.makeText(</span>
+                            AddCityActivity.this,
+                            &quot;Invalid city. Please enter a real city name.&quot;,
+                            Toast.LENGTH_SHORT
+<span class="nc" id="L83">                    ).show();</span>
+<span class="nc" id="L84">                    return;</span>
+                }
+
+<span class="fc" id="L87">                boolean success = databaseHelper.addCityForUser(currentUsername, cityName);</span>
+<span class="pc bpc" id="L88" title="1 of 2 branches missed.">                if (success) {</span>
+<span class="fc" id="L89">                    Toast.makeText(AddCityActivity.this, &quot;City added successfully&quot;, Toast.LENGTH_SHORT).show();</span>
+<span class="fc" id="L90">                    finish();</span>
+                } else {
+<span class="nc" id="L92">                    Toast.makeText(AddCityActivity.this, &quot;Failed to add city&quot;, Toast.LENGTH_SHORT).show();</span>
+                }
+<span class="fc" id="L94">            });</span>
+<span class="fc" id="L95">        });</span>
+<span class="fc" id="L96">    }</span>
+
+    private boolean isValidCity(String cityName) {
+<span class="nc" id="L99">        Geocoder geocoder = new Geocoder(this, Locale.getDefault());</span>
+
+        try {
+<span class="nc" id="L102">            List&lt;Address&gt; results = geocoder.getFromLocationName(cityName, 5);</span>
+<span class="nc bnc" id="L103" title="All 4 branches missed.">            if (results == null || results.isEmpty()) {</span>
+<span class="nc" id="L104">                return false;</span>
+            }
+
+<span class="nc" id="L107">            String input = cityName.trim().toLowerCase();</span>
+
+<span class="nc bnc" id="L109" title="All 2 branches missed.">            for (Address address : results) {</span>
+<span class="nc" id="L110">                String locality = address.getLocality();</span>
+<span class="nc" id="L111">                String subAdmin = address.getSubAdminArea();</span>
+<span class="nc" id="L112">                String admin = address.getAdminArea();</span>
+
+<span class="nc bnc" id="L114" title="All 4 branches missed.">                if (locality != null &amp;&amp; locality.trim().toLowerCase().equals(input)) {</span>
+<span class="nc" id="L115">                    return true;</span>
+                }
+
+<span class="nc bnc" id="L118" title="All 4 branches missed.">                if (subAdmin != null &amp;&amp; subAdmin.trim().toLowerCase().equals(input)) {</span>
+<span class="nc" id="L119">                    return true;</span>
+                }
+
+<span class="nc bnc" id="L122" title="All 4 branches missed.">                if (admin != null &amp;&amp; admin.trim().toLowerCase().equals(input)) {</span>
+<span class="nc" id="L123">                    return true;</span>
+                }
+<span class="nc" id="L125">            }</span>
+
+<span class="nc" id="L127">            return false;</span>
+<span class="nc" id="L128">        } catch (IOException e) {</span>
+<span class="nc" id="L129">            return false;</span>
+        }
+    }
+
+    /** Ensures proper capitalization of city name after its typed for display **/
+    private static String properCap(String input) {
+<span class="pc bpc" id="L135" title="2 of 4 branches missed.">        if (input == null || input.isEmpty()) return input;</span>
+<span class="fc" id="L136">        String[] words = input.trim().split(&quot;\\s+&quot;);</span>
+<span class="fc" id="L137">        StringBuilder sb = new StringBuilder();</span>
+<span class="fc bfc" id="L138" title="All 2 branches covered.">        for (String word : words) {</span>
+<span class="pc bpc" id="L139" title="1 of 2 branches missed.">            if (!word.isEmpty()) {</span>
+<span class="fc" id="L140">                sb.append(Character.toUpperCase(word.charAt(0)))</span>
+<span class="fc" id="L141">                        .append(word.substring(1).toLowerCase());</span>
+<span class="fc" id="L142">                sb.append(&quot; &quot;);</span>
+            }
+        }
+<span class="fc" id="L145">        return sb.toString().trim();</span>
+    }
+
+    /**clean up method**/
+    @Override
+    protected void onDestroy() {
+<span class="fc" id="L151">        super.onDestroy();</span>
+<span class="fc" id="L152">        executor.shutdown();</span>
+<span class="fc" id="L153">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>
