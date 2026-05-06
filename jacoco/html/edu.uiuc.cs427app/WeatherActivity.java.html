@@ -1,0 +1,246 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>WeatherActivity.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">app</a> &gt; <a href="index.source.html" class="el_package">edu.uiuc.cs427app</a> &gt; <span class="el_source">WeatherActivity.java</span></div><h1>WeatherActivity.java</h1><pre class="source lang-java linenums">package edu.uiuc.cs427app;
+
+import android.content.Intent;
+import android.os.Bundle;
+import android.view.MenuItem;
+import android.view.View;
+import android.widget.Button;
+import android.widget.ProgressBar;
+import android.widget.TextView;
+import android.widget.Toast;
+
+import androidx.appcompat.app.AppCompatActivity;
+
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
+import edu.uiuc.cs427app.theme.ThemeContract;
+import edu.uiuc.cs427app.theme.ThemeDefaults;
+import edu.uiuc.cs427app.theme.ThemeManager;
+import edu.uiuc.cs427app.theme.ThemeParser;
+import edu.uiuc.cs427app.theme.ThemePromptBuilder;
+import edu.uiuc.cs427app.theme.ThemeSpec;
+
+/**
+ * Activity that displays current weather for a city selected from the main list.
+ * Weather data is loaded from a remote API on a background thread. When loading
+ * completes successfully, the user may open {@link WeatherInsightsActivity} with
+ * the same city identifier and raw JSON payload passed as intent extras.
+ */
+<span class="fc" id="L30">public class WeatherActivity extends AppCompatActivity {</span>
+
+    /**
+     * Intent extra key for the city name.
+     */
+    public static final String EXTRA_CITY = &quot;city&quot;;
+
+    private ProgressBar progressBar;
+    private TextView cityView;
+    private TextView dateTimeView;
+    private TextView temperatureView;
+    private TextView conditionView;
+    private TextView humidityView;
+    private TextView windView;
+    private TextView errorView;
+    private Button insightsButton;
+
+<span class="fc" id="L47">    private final ExecutorService executor = Executors.newSingleThreadExecutor();</span>
+
+<span class="fc" id="L49">    private String cityFromIntent = &quot;&quot;;</span>
+<span class="fc" id="L50">    private String lastSuccessJson = &quot;&quot;;</span>
+
+    /**
+     * Initializes the layout, enables the action bar up affordance, reads the city
+     * from the launching intent, and begins asynchronous weather retrieval.
+     *
+     * @param savedInstanceState previously saved instance state, or {@code null}
+     */
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+<span class="fc" id="L60">        super.onCreate(savedInstanceState);</span>
+<span class="fc" id="L61">        setContentView(R.layout.activity_weather);</span>
+
+<span class="pc bpc" id="L63" title="1 of 2 branches missed.">        if (getSupportActionBar() != null) {</span>
+<span class="fc" id="L64">            getSupportActionBar().setDisplayHomeAsUpEnabled(true);</span>
+<span class="fc" id="L65">            getSupportActionBar().setTitle(R.string.weather_screen_title);</span>
+        }
+
+<span class="fc" id="L68">        String themeJson = getIntent().getStringExtra(ThemeContract.EXTRA_THEME_JSON);</span>
+<span class="pc bpc" id="L69" title="3 of 4 branches missed.">        if (themeJson != null &amp;&amp; !themeJson.isEmpty()) {</span>
+<span class="nc" id="L70">            ThemeManager.applyTheme(this, ThemeParser.parseThemeJsonOrDefault(themeJson));</span>
+        }
+
+<span class="fc" id="L73">        cityFromIntent = safeExtraCity(getIntent().getStringExtra(EXTRA_CITY));</span>
+<span class="fc" id="L74">        bindViews();</span>
+<span class="fc" id="L75">        wireInsightsButton();</span>
+<span class="fc" id="L76">        startWeatherFetch();</span>
+<span class="fc" id="L77">    }</span>
+
+    /**
+     * Obtains references to all views required to render loading state, weather
+     * fields, errors, and the insights action.
+     */
+    private void bindViews() {
+<span class="fc" id="L84">        progressBar = findViewById(R.id.weatherProgress);</span>
+<span class="fc" id="L85">        cityView = findViewById(R.id.weatherCityName);</span>
+<span class="fc" id="L86">        dateTimeView = findViewById(R.id.weatherDateTime);</span>
+<span class="fc" id="L87">        temperatureView = findViewById(R.id.weatherTemperature);</span>
+<span class="fc" id="L88">        conditionView = findViewById(R.id.weatherCondition);</span>
+<span class="fc" id="L89">        humidityView = findViewById(R.id.weatherHumidity);</span>
+<span class="fc" id="L90">        windView = findViewById(R.id.weatherWind);</span>
+<span class="fc" id="L91">        errorView = findViewById(R.id.weatherError);</span>
+<span class="fc" id="L92">        insightsButton = findViewById(R.id.weatherInsightsButton);</span>
+<span class="fc" id="L93">    }</span>
+
+    /**
+     * Registers the insights button listener and leaves the control disabled until
+     * a successful response supplies non-empty JSON for the downstream screen.
+     */
+    private void wireInsightsButton() {
+<span class="fc" id="L100">        insightsButton.setEnabled(false);</span>
+<span class="fc" id="L101">        insightsButton.setOnClickListener(v -&gt; openWeatherInsights());</span>
+<span class="fc" id="L102">    }</span>
+
+    /**
+     * Starts {@link WeatherInsightsActivity} with the city name and complete weather
+     * JSON required by that activity's intent contract.
+     */
+    private void openWeatherInsights() {
+<span class="pc bpc" id="L109" title="1 of 2 branches missed.">        if (lastSuccessJson.isEmpty()) {</span>
+<span class="nc" id="L110">            Toast.makeText(this, R.string.weather_insights_missing_context, Toast.LENGTH_LONG).show();</span>
+<span class="nc" id="L111">            return;</span>
+        }
+<span class="fc" id="L113">        Intent intent = new Intent(this, WeatherInsightsActivity.class);</span>
+<span class="fc" id="L114">        intent.putExtra(WeatherInsightsActivity.EXTRA_CITY_NAME, cityFromIntent);</span>
+<span class="fc" id="L115">        intent.putExtra(WeatherInsightsActivity.EXTRA_WEATHER_JSON, lastSuccessJson);</span>
+<span class="fc" id="L116">        intent.putExtra(ThemeContract.EXTRA_THEME_JSON, getIntent().getStringExtra(ThemeContract.EXTRA_THEME_JSON));</span>
+<span class="fc" id="L117">        startActivity(intent);</span>
+<span class="fc" id="L118">    }</span>
+
+    /**
+     * Executes {@link WeatherRepository#fetchCurrentWeather(String, String)} off the
+     * UI thread and posts the resulting {@link WeatherResult} back to the main thread.
+     */
+    private void startWeatherFetch() {
+<span class="fc" id="L125">        setLoadingUi(true);</span>
+<span class="fc" id="L126">        clearDetails();</span>
+<span class="fc" id="L127">        insightsButton.setEnabled(false);</span>
+<span class="fc" id="L128">        lastSuccessJson = &quot;&quot;;</span>
+
+<span class="fc" id="L130">        executor.execute(() -&gt; {</span>
+<span class="fc" id="L131">            WeatherResult result = WeatherRepository.fetchCurrentWeather(</span>
+                    cityFromIntent, BuildConfig.WEATHER_API_KEY);
+<span class="fc" id="L133">            runOnUiThread(() -&gt; applyWeatherResult(result));</span>
+<span class="fc" id="L134">        });</span>
+<span class="fc" id="L135">    }</span>
+
+    /**
+     * Binds weather text fields from a successful result, or presents an error state
+     * and notification when the repository reports failure. Must run on the main thread.
+     *
+     * @param result outcome of the background fetch operation
+     */
+    private void applyWeatherResult(WeatherResult result) {
+<span class="fc" id="L144">        setLoadingUi(false);</span>
+<span class="pc bpc" id="L145" title="2 of 4 branches missed.">        if (result.isOk() &amp;&amp; result.getData() != null) {</span>
+<span class="fc" id="L146">            WeatherData d = result.getData();</span>
+<span class="fc" id="L147">            errorView.setVisibility(View.GONE);</span>
+<span class="fc" id="L148">            cityView.setText(d.getCityDisplayName());</span>
+<span class="fc" id="L149">            dateTimeView.setText(d.getDateTimeLine());</span>
+<span class="fc" id="L150">            temperatureView.setText(getString(R.string.weather_label_temperature, d.getTemperatureLine()));</span>
+<span class="fc" id="L151">            conditionView.setText(getString(R.string.weather_label_condition, d.getConditionLabel()));</span>
+<span class="fc" id="L152">            humidityView.setText(getString(R.string.weather_label_humidity, d.getHumidityLine()));</span>
+<span class="fc" id="L153">            windView.setText(getString(R.string.weather_label_wind, d.getWindLine()));</span>
+<span class="fc" id="L154">            lastSuccessJson = d.getRawApiJson();</span>
+<span class="fc" id="L155">            insightsButton.setEnabled(true);</span>
+<span class="fc" id="L156">        } else {</span>
+<span class="nc bnc" id="L157" title="All 2 branches missed.">            String msg = result.getErrorMessage() != null ? result.getErrorMessage()</span>
+<span class="nc" id="L158">                    : getString(R.string.weather_generic_error);</span>
+<span class="nc" id="L159">            showErrorState(msg);</span>
+<span class="nc" id="L160">            Toast.makeText(this, msg, Toast.LENGTH_LONG).show();</span>
+        }
+<span class="fc" id="L162">    }</span>
+
+    /**
+     * Resets detail text fields prior to a new request so obsolete measurements are not
+     * shown together with the progress indicator. Retains a provisional city label when known.
+     */
+    private void clearDetails() {
+<span class="pc bpc" id="L169" title="1 of 2 branches missed.">        cityView.setText(cityFromIntent.isEmpty() ? getString(R.string.weather_unknown_city) : cityFromIntent);</span>
+<span class="fc" id="L170">        dateTimeView.setText(&quot;&quot;);</span>
+<span class="fc" id="L171">        temperatureView.setText(&quot;&quot;);</span>
+<span class="fc" id="L172">        conditionView.setText(&quot;&quot;);</span>
+<span class="fc" id="L173">        humidityView.setText(&quot;&quot;);</span>
+<span class="fc" id="L174">        windView.setText(&quot;&quot;);</span>
+<span class="fc" id="L175">        errorView.setVisibility(View.GONE);</span>
+<span class="fc" id="L176">        errorView.setText(&quot;&quot;);</span>
+<span class="fc" id="L177">    }</span>
+
+    /**
+     * Displays the error text region, disables the insights control, and clears any
+     * cached JSON when the service request does not yield displayable weather data.
+     *
+     * @param message user-facing description of the failure
+     */
+    private void showErrorState(String message) {
+<span class="nc" id="L186">        errorView.setVisibility(View.VISIBLE);</span>
+<span class="nc" id="L187">        errorView.setText(message);</span>
+<span class="nc" id="L188">        insightsButton.setEnabled(false);</span>
+<span class="nc" id="L189">        lastSuccessJson = &quot;&quot;;</span>
+<span class="nc" id="L190">    }</span>
+
+    /**
+     * Shows or hides the indeterminate progress indicator while network I/O is pending.
+     *
+     * @param loading {@code true} to show progress, {@code false} to hide it
+     */
+    private void setLoadingUi(boolean loading) {
+<span class="fc bfc" id="L198" title="All 2 branches covered.">        progressBar.setVisibility(loading ? View.VISIBLE : View.GONE);</span>
+<span class="fc" id="L199">    }</span>
+
+    /**
+     * Returns a trimmed city string, or an empty string when the intent extra is absent.
+     *
+     * @param raw value read from the intent, possibly {@code null}
+     * @return non-null trimmed city text
+     */
+    private static String safeExtraCity(String raw) {
+<span class="pc bpc" id="L208" title="1 of 2 branches missed.">        return raw == null ? &quot;&quot; : raw.trim();</span>
+    }
+
+    /**
+     * Handles navigation via the action bar up affordance by finishing this activity.
+     *
+     * @return {@code true} because the event is consumed
+     */
+    @Override
+    public boolean onSupportNavigateUp() {
+<span class="nc" id="L218">        finish();</span>
+<span class="nc" id="L219">        return true;</span>
+    }
+
+    /**
+     * Handles the home-as-up menu item consistently with {@link #onSupportNavigateUp()}.
+     *
+     * @param item selected menu item
+     * @return {@code true} when the home item is handled; otherwise delegates to the superclass
+     */
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+<span class="nc bnc" id="L230" title="All 2 branches missed.">        if (item.getItemId() == android.R.id.home) {</span>
+<span class="nc" id="L231">            finish();</span>
+<span class="nc" id="L232">            return true;</span>
+        }
+<span class="nc" id="L234">        return super.onOptionsItemSelected(item);</span>
+    }
+
+    /**
+     * Releases the background executor when the activity is destroyed.
+     */
+    @Override
+    protected void onDestroy() {
+<span class="fc" id="L242">        super.onDestroy();</span>
+<span class="fc" id="L243">        executor.shutdown();</span>
+<span class="fc" id="L244">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

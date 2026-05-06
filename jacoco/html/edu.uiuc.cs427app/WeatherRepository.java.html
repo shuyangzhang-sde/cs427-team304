@@ -1,0 +1,288 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>WeatherRepository.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">app</a> &gt; <a href="index.source.html" class="el_package">edu.uiuc.cs427app</a> &gt; <span class="el_source">WeatherRepository.java</span></div><h1>WeatherRepository.java</h1><pre class="source lang-java linenums">package edu.uiuc.cs427app;
+
+import org.json.JSONArray;
+import org.json.JSONObject;
+
+import java.io.BufferedReader;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.Locale;
+
+/**
+ * Fetches current weather from the OpenWeatherMap HTTP API using the same kind of
+ * city name string the app stores for each user. Requests use HttpURLConnection, in
+ * line with how other network code in the project is written.
+ */
+public final class WeatherRepository {
+
+    private static final String OPEN_WEATHER_ENDPOINT =
+            &quot;https://api.openweathermap.org/data/2.5/weather&quot;;
+
+    /**
+     * Hides the default constructor; callers should use the static fetch method only.
+     */
+    private WeatherRepository() {
+    }
+
+    /**
+     * Looks up current weather for the given city text and API key. The call blocks until
+     * the HTTP request finishes and the body is parsed, so it should run on a background
+     * thread, not the UI thread. On success you get a WeatherResult carrying WeatherData;
+     * on failure the result carries an error message instead of invented numbers.
+     *
+     * @param cityQuery free-text location query, typically the city string stored for the user
+     * @param apiKey    OpenWeatherMap API key supplied from build configuration, not hardcoded in source
+     * @return a WeatherResult containing parsed data on success, or an error description on failure
+     */
+    public static WeatherResult fetchCurrentWeather(String cityQuery, String apiKey) {
+<span class="pc bpc" id="L47" title="2 of 4 branches missed.">        if (cityQuery == null || cityQuery.trim().isEmpty()) {</span>
+<span class="nc" id="L48">            return WeatherResult.error(&quot;City name is missing.&quot;);</span>
+        }
+<span class="pc bpc" id="L50" title="3 of 6 branches missed.">        if (apiKey == null || apiKey.trim().isEmpty() || apiKey.contains(&quot;{&quot;)) {</span>
+<span class="nc" id="L51">            return WeatherResult.error(&quot;Weather API key is not configured.&quot;);</span>
+        }
+<span class="fc" id="L53">        HttpURLConnection connection = null;</span>
+        try {
+<span class="fc" id="L55">            String encodedQuery = URLEncoder.encode(cityQuery.trim(), StandardCharsets.UTF_8.name());</span>
+<span class="fc" id="L56">            String urlString = OPEN_WEATHER_ENDPOINT</span>
+                    + &quot;?q=&quot; + encodedQuery
+                    + &quot;&amp;units=metric&quot;
+<span class="fc" id="L59">                    + &quot;&amp;appid=&quot; + URLEncoder.encode(apiKey.trim(), StandardCharsets.UTF_8.name());</span>
+<span class="fc" id="L60">            connection = (HttpURLConnection) new URL(urlString).openConnection();</span>
+<span class="fc" id="L61">            connection.setRequestMethod(&quot;GET&quot;);</span>
+<span class="fc" id="L62">            connection.setConnectTimeout(20_000);</span>
+<span class="fc" id="L63">            connection.setReadTimeout(20_000);</span>
+
+<span class="fc" id="L65">            int code = connection.getResponseCode();</span>
+<span class="fc" id="L66">            String body = readStreamToString(selectStream(connection, code));</span>
+<span class="pc bpc" id="L67" title="1 of 2 branches missed.">            if (code == HttpURLConnection.HTTP_OK) {</span>
+<span class="fc" id="L68">                return parseOpenWeatherJson(body, cityQuery.trim());</span>
+            }
+<span class="nc" id="L70">            return WeatherResult.error(mapHttpError(code, body));</span>
+<span class="nc" id="L71">        } catch (Exception e) {</span>
+<span class="nc" id="L72">            return WeatherResult.error(&quot;Could not load weather (&quot; + e.getMessage() + &quot;).&quot;);</span>
+        } finally {
+<span class="pc bpc" id="L74" title="1 of 2 branches missed.">            if (connection != null) {</span>
+<span class="fc" id="L75">                connection.disconnect();</span>
+            }
+        }
+    }
+
+    /**
+     * For client or server error status codes the body usually sits on the error stream;
+     * otherwise the normal input stream is used. Throws if the connection cannot supply a stream.
+     *
+     * @param connection open HTTP connection for the weather request
+     * @param code         HTTP response status code
+     * @return the input stream that should be read for the response body
+     * @throws Exception if the connection cannot provide a response stream
+     */
+    private static InputStream selectStream(HttpURLConnection connection, int code) throws Exception {
+<span class="pc bpc" id="L90" title="1 of 2 branches missed.">        if (code &gt;= 400) {</span>
+<span class="nc" id="L91">            InputStream err = connection.getErrorStream();</span>
+<span class="nc bnc" id="L92" title="All 2 branches missed.">            return err != null ? err : connection.getInputStream();</span>
+        }
+<span class="fc" id="L94">        return connection.getInputStream();</span>
+    }
+
+    /**
+     * Reads the whole response as UTF-8 text. A null stream yields an empty string rather than failing.
+     * Any I/O problem while reading is thrown to the caller.
+     *
+     * @param stream response body stream, or null
+     * @return full body as one string, or an empty string when the stream is null
+     * @throws Exception if reading or closing the stream fails
+     */
+    private static String readStreamToString(InputStream stream) throws Exception {
+<span class="pc bpc" id="L106" title="1 of 2 branches missed.">        if (stream == null) {</span>
+<span class="nc" id="L107">            return &quot;&quot;;</span>
+        }
+<span class="fc" id="L109">        BufferedReader reader = new BufferedReader(new InputStreamReader(stream, StandardCharsets.UTF_8));</span>
+<span class="fc" id="L110">        StringBuilder builder = new StringBuilder();</span>
+<span class="fc bfc" id="L111" title="All 2 branches covered.">        for (String line; (line = reader.readLine()) != null; ) {</span>
+<span class="fc" id="L112">            builder.append(line);</span>
+        }
+<span class="fc" id="L114">        reader.close();</span>
+<span class="fc" id="L115">        return builder.toString();</span>
+    }
+
+    /**
+     * Turns a failed HTTP status into a short message for the user. When the JSON body
+     * includes a top-level &quot;message&quot; string from OpenWeatherMap, that text is included;
+     * otherwise the method falls back to a generic line that names the status code.
+     *
+     * @param code HTTP status code from the failed response
+     * @param body raw response body text, if any
+     * @return a concise, user-facing error message
+     */
+    private static String mapHttpError(int code, String body) {
+        try {
+<span class="nc bnc" id="L129" title="All 4 branches missed.">            if (body != null &amp;&amp; !body.isEmpty()) {</span>
+<span class="nc" id="L130">                JSONObject o = new JSONObject(body);</span>
+<span class="nc bnc" id="L131" title="All 2 branches missed.">                if (o.has(&quot;message&quot;)) {</span>
+<span class="nc" id="L132">                    return &quot;Weather service: &quot; + o.getString(&quot;message&quot;);</span>
+                }
+            }
+<span class="nc" id="L135">        } catch (Exception ignored) {</span>
+            // If the error body is not JSON, ignore and use the generic message below.
+<span class="nc" id="L137">        }</span>
+<span class="nc" id="L138">        return &quot;Weather service returned HTTP &quot; + code + &quot;.&quot;;</span>
+    }
+
+    /**
+     * Expects the JSON from a successful current-weather response. It fills a WeatherData
+     * object when temperature, conditions, and related fields are present, and keeps the
+     * original JSON string so other screens can reuse it. If a piece is missing, it returns
+     * an error WeatherResult instead of guessing values. The fallback city name is used only
+     * when the payload does not include a usable &quot;name&quot; field.
+     *
+     * @param jsonBody          raw JSON response body from a 200 OK response
+     * @param fallbackCityName  city label to use when the JSON name field is empty or absent
+     * @return a successful WeatherResult with populated WeatherData, or an error WeatherResult
+     */
+    private static WeatherResult parseOpenWeatherJson(String jsonBody, String fallbackCityName) {
+        try {
+<span class="fc" id="L154">            JSONObject root = new JSONObject(jsonBody);</span>
+<span class="fc" id="L155">            String name = root.optString(&quot;name&quot;, fallbackCityName);</span>
+<span class="pc bpc" id="L156" title="1 of 2 branches missed.">            if (name.isEmpty()) {</span>
+<span class="nc" id="L157">                name = fallbackCityName;</span>
+            }
+
+<span class="fc" id="L160">            JSONObject main = root.optJSONObject(&quot;main&quot;);</span>
+<span class="pc bpc" id="L161" title="1 of 2 branches missed.">            if (main == null) {</span>
+<span class="nc" id="L162">                return WeatherResult.error(&quot;Weather response was missing temperature data.&quot;);</span>
+            }
+
+<span class="fc" id="L165">            JSONArray weatherArr = root.optJSONArray(&quot;weather&quot;);</span>
+<span class="pc bpc" id="L166" title="2 of 4 branches missed.">            if (weatherArr == null || weatherArr.length() == 0) {</span>
+<span class="nc" id="L167">                return WeatherResult.error(&quot;Weather response was missing conditions.&quot;);</span>
+            }
+<span class="fc" id="L169">            JSONObject weather0 = weatherArr.getJSONObject(0);</span>
+<span class="fc" id="L170">            String description = weather0.optString(&quot;description&quot;, weather0.optString(&quot;main&quot;, &quot;&quot;));</span>
+
+<span class="fc" id="L172">            JSONObject wind = root.optJSONObject(&quot;wind&quot;);</span>
+<span class="pc bpc" id="L173" title="1 of 2 branches missed.">            double speedMs = wind != null ? wind.optDouble(&quot;speed&quot;, Double.NaN) : Double.NaN;</span>
+<span class="pc bpc" id="L174" title="1 of 2 branches missed.">            double deg = wind != null ? wind.optDouble(&quot;deg&quot;, Double.NaN) : Double.NaN;</span>
+
+<span class="fc" id="L176">            long dtSeconds = root.optLong(&quot;dt&quot;, System.currentTimeMillis() / 1000L);</span>
+<span class="fc" id="L177">            int tzSeconds = root.optInt(&quot;timezone&quot;, 0);</span>
+<span class="fc" id="L178">            String timeLine = formatCityLocalTime(dtSeconds, tzSeconds);</span>
+
+<span class="fc" id="L180">            double temp = main.optDouble(&quot;temp&quot;, Double.NaN);</span>
+<span class="pc bpc" id="L181" title="1 of 2 branches missed.">            if (Double.isNaN(temp)) {</span>
+<span class="nc" id="L182">                return WeatherResult.error(&quot;Weather response was missing temperature.&quot;);</span>
+            }
+<span class="fc" id="L184">            String tempLine = String.format(Locale.US, &quot;%.1f °C&quot;, temp);</span>
+
+<span class="fc" id="L186">            int humidity = main.optInt(&quot;humidity&quot;, -1);</span>
+<span class="pc bpc" id="L187" title="1 of 2 branches missed.">            String humidityLine = humidity &gt;= 0 ? humidity + &quot;%&quot; : &quot;—&quot;;</span>
+
+<span class="fc" id="L189">            String windLine = formatWind(speedMs, deg);</span>
+
+<span class="fc" id="L191">            WeatherData data = new WeatherData(</span>
+                    name,
+                    timeLine,
+                    tempLine,
+<span class="fc" id="L195">                    capitalizeWords(description),</span>
+                    humidityLine,
+                    windLine,
+                    jsonBody);
+<span class="fc" id="L199">            return WeatherResult.ok(data);</span>
+<span class="nc" id="L200">        } catch (Exception e) {</span>
+<span class="nc" id="L201">            return WeatherResult.error(&quot;Could not read weather data.&quot;);</span>
+        }
+    }
+
+    /**
+     * Formats the observation time in the city's local zone. The API supplies a timezone
+     * value as seconds east or west of UTC; together with the Unix observation time in UTC,
+     * that yields a civil clock time and offset label for the UI.
+     *
+     * @param utcEpochSeconds       observation instant as Unix epoch seconds in UTC
+     * @param timezoneShiftSeconds  offset from UTC to local civil time, in seconds, as provided by the API
+     * @return formatted date, time, and zone offset suitable for display
+     */
+    private static String formatCityLocalTime(long utcEpochSeconds, int timezoneShiftSeconds) {
+<span class="fc" id="L215">        ZoneOffset offset = ZoneOffset.ofTotalSeconds(timezoneShiftSeconds);</span>
+<span class="fc" id="L216">        ZoneId zoneId = ZoneId.ofOffset(&quot;UTC&quot;, offset);</span>
+<span class="fc" id="L217">        ZonedDateTime zdt = Instant.ofEpochSecond(utcEpochSeconds).atZone(zoneId);</span>
+<span class="fc" id="L218">        DateTimeFormatter formatter = DateTimeFormatter.ofPattern(</span>
+                &quot;EEEE, MMM d, yyyy HH:mm (XXX)&quot;, Locale.US);
+<span class="fc" id="L220">        return zdt.format(formatter);</span>
+    }
+
+    /**
+     * Produces a single line for wind: metric speed in meters per second, and when the
+     * service sends a direction in degrees, an approximate compass direction such as NE.
+     * Missing speed is shown as an em dash; missing direction simply omits the compass part.
+     *
+     * @param speedMs wind speed in meters per second, or NaN when not provided
+     * @param deg     wind direction in degrees clockwise from north, or NaN when not provided
+     * @return a single formatted line describing wind speed and optional direction
+     */
+    private static String formatWind(double speedMs, double deg) {
+<span class="pc bpc" id="L233" title="1 of 2 branches missed.">        if (Double.isNaN(speedMs)) {</span>
+<span class="nc" id="L234">            return &quot;—&quot;;</span>
+        }
+<span class="fc" id="L236">        String speedPart = String.format(Locale.US, &quot;%.1f m/s&quot;, speedMs);</span>
+<span class="pc bpc" id="L237" title="1 of 2 branches missed.">        if (Double.isNaN(deg)) {</span>
+<span class="nc" id="L238">            return speedPart;</span>
+        }
+<span class="fc" id="L240">        return speedPart + &quot;, from &quot; + degreesToCompass(deg);</span>
+    }
+
+    /**
+     * Maps a wind direction in degrees, measured clockwise from north, to the nearest
+     * of eight compass labels (N, NE, E, and so on).
+     *
+     * @param degrees wind direction in degrees, clockwise from north
+     * @return the nearest compass octant abbreviation
+     */
+    private static String degreesToCompass(double degrees) {
+<span class="fc" id="L251">        String[] dirs = {&quot;N&quot;, &quot;NE&quot;, &quot;E&quot;, &quot;SE&quot;, &quot;S&quot;, &quot;SW&quot;, &quot;W&quot;, &quot;NW&quot;};</span>
+<span class="fc" id="L252">        int idx = (int) Math.round(degrees / 45.0) % 8;</span>
+<span class="pc bpc" id="L253" title="1 of 2 branches missed.">        if (idx &lt; 0) {</span>
+<span class="nc" id="L254">            idx += 8;</span>
+        }
+<span class="fc" id="L256">        return dirs[idx];</span>
+    }
+
+    /**
+     * Tidies a short description from the API by capitalizing each word so it reads cleanly
+     * in the weather screen. Null or blank input returns an empty string.
+     *
+     * @param raw provider-supplied weather description text
+     * @return title-cased words, or an empty string when the input is null or blank
+     */
+    private static String capitalizeWords(String raw) {
+<span class="pc bpc" id="L267" title="2 of 4 branches missed.">        if (raw == null || raw.isEmpty()) {</span>
+<span class="nc" id="L268">            return &quot;&quot;;</span>
+        }
+<span class="fc" id="L270">        String[] parts = raw.trim().split(&quot;\\s+&quot;);</span>
+<span class="fc" id="L271">        StringBuilder out = new StringBuilder();</span>
+<span class="fc bfc" id="L272" title="All 2 branches covered.">        for (int i = 0; i &lt; parts.length; i++) {</span>
+<span class="fc bfc" id="L273" title="All 2 branches covered.">            if (i &gt; 0) {</span>
+<span class="fc" id="L274">                out.append(' ');</span>
+            }
+<span class="fc" id="L276">            String p = parts[i];</span>
+<span class="pc bpc" id="L277" title="1 of 2 branches missed.">            if (p.isEmpty()) {</span>
+<span class="nc" id="L278">                continue;</span>
+            }
+<span class="fc" id="L280">            out.append(Character.toUpperCase(p.charAt(0)));</span>
+<span class="pc bpc" id="L281" title="1 of 2 branches missed.">            if (p.length() &gt; 1) {</span>
+<span class="fc" id="L282">                out.append(p.substring(1).toLowerCase(Locale.US));</span>
+            }
+        }
+<span class="fc" id="L285">        return out.toString();</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

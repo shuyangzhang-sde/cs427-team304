@@ -1,0 +1,195 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>DatabaseHelper.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">app</a> &gt; <a href="index.source.html" class="el_package">edu.uiuc.cs427app</a> &gt; <span class="el_source">DatabaseHelper.java</span></div><h1>DatabaseHelper.java</h1><pre class="source lang-java linenums">package edu.uiuc.cs427app;
+
+import android.content.ContentValues;
+import android.content.Context;
+import android.database.Cursor;
+import android.database.sqlite.SQLiteDatabase;
+import android.database.sqlite.SQLiteOpenHelper;
+
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
+
+public class DatabaseHelper extends SQLiteOpenHelper {
+
+    private static final String DATABASE_NAME = &quot;cs427app.db&quot;;
+    private static final int DATABASE_VERSION = 3;
+
+    private static final String TABLE_USERS = &quot;users&quot;;
+    private static final String COL_USER_ID = &quot;id&quot;;
+
+    private static final String COL_USERNAME = &quot;username&quot;;
+    private static final String COL_PASSWORD = &quot;password&quot;;
+    private static final String COL_THEME_DESC = &quot;theme_description&quot;;
+    private static final String TABLE_CITIES = &quot;cities&quot;;
+    private static final String COL_CITY_ID = &quot;id&quot;;
+    private static final String COL_CITY_USERNAME = &quot;username&quot;;
+    private static final String COL_CITY_NAME = &quot;city&quot;;
+
+    private static final String COL_THEME_JSON = &quot;theme_json&quot;;
+
+    public DatabaseHelper(Context context) {
+<span class="fc" id="L32">        super(context, DATABASE_NAME, null, DATABASE_VERSION);</span>
+<span class="fc" id="L33">    }</span>
+
+    @Override
+    public void onCreate(SQLiteDatabase db) {
+<span class="fc" id="L37">        String createUsersTable = &quot;CREATE TABLE &quot; + TABLE_USERS + &quot; (&quot;</span>
+                + COL_USER_ID + &quot; INTEGER PRIMARY KEY AUTOINCREMENT, &quot;
+                + COL_USERNAME + &quot; TEXT UNIQUE NOT NULL, &quot;
+                + COL_PASSWORD + &quot; TEXT NOT NULL, &quot;
+                + COL_THEME_DESC + &quot; TEXT, &quot;
+                + COL_THEME_JSON + &quot; TEXT)&quot;;
+<span class="fc" id="L43">        db.execSQL(createUsersTable);</span>
+
+<span class="fc" id="L45">        String createCitiesTable = &quot;CREATE TABLE &quot; + TABLE_CITIES + &quot; (&quot;</span>
+                + COL_CITY_ID + &quot; INTEGER PRIMARY KEY AUTOINCREMENT, &quot;
+                + COL_CITY_USERNAME + &quot; TEXT NOT NULL, &quot;
+                + COL_CITY_NAME + &quot; TEXT NOT NULL)&quot;;
+<span class="fc" id="L49">        db.execSQL(createCitiesTable);</span>
+<span class="fc" id="L50">    }</span>
+
+    @Override
+    public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
+<span class="nc" id="L54">        db.execSQL(&quot;DROP TABLE IF EXISTS &quot; + TABLE_CITIES);</span>
+<span class="nc" id="L55">        db.execSQL(&quot;DROP TABLE IF EXISTS &quot; + TABLE_USERS);</span>
+<span class="nc" id="L56">        onCreate(db);</span>
+<span class="nc" id="L57">    }</span>
+
+    private String hashPassword(String password) {
+        try {
+<span class="fc" id="L61">            MessageDigest digest = MessageDigest.getInstance(&quot;SHA-256&quot;);</span>
+<span class="fc" id="L62">            byte[] hash = digest.digest(password.getBytes());</span>
+<span class="fc" id="L63">            StringBuilder hexString = new StringBuilder();</span>
+<span class="fc bfc" id="L64" title="All 2 branches covered.">            for (byte b : hash) {</span>
+<span class="fc" id="L65">                String hex = Integer.toHexString(0xff &amp; b);</span>
+<span class="fc bfc" id="L66" title="All 2 branches covered.">                if (hex.length() == 1) hexString.append('0');</span>
+<span class="fc" id="L67">                hexString.append(hex);</span>
+            }
+<span class="fc" id="L69">            return hexString.toString();</span>
+<span class="nc" id="L70">        } catch (NoSuchAlgorithmException e) {</span>
+<span class="nc" id="L71">            throw new RuntimeException(&quot;SHA-256 algorithm not found&quot;, e);</span>
+        }
+    }
+
+    public boolean addUser(String username, String password, String themeDescription) {
+<span class="fc" id="L76">        SQLiteDatabase db = this.getWritableDatabase();</span>
+<span class="fc" id="L77">        ContentValues values = new ContentValues();</span>
+<span class="fc" id="L78">        values.put(COL_USERNAME, username);</span>
+<span class="fc" id="L79">        values.put(COL_PASSWORD, hashPassword(password));</span>
+<span class="fc" id="L80">        values.put(COL_THEME_DESC, themeDescription);</span>
+<span class="fc" id="L81">        long result = db.insert(TABLE_USERS, null, values);</span>
+<span class="pc bpc" id="L82" title="1 of 2 branches missed.">        return result != -1;</span>
+    }
+
+    public boolean checkUser(String username, String password) {
+<span class="fc" id="L86">        SQLiteDatabase db = this.getReadableDatabase();</span>
+<span class="fc" id="L87">        String hashedPassword = hashPassword(password);</span>
+<span class="fc" id="L88">        Cursor cursor = db.rawQuery(</span>
+                &quot;SELECT * FROM &quot; + TABLE_USERS
+                        + &quot; WHERE &quot; + COL_USERNAME + &quot; = ? AND &quot; + COL_PASSWORD + &quot; = ?&quot;,
+                new String[]{username, hashedPassword});
+<span class="fc bfc" id="L92" title="All 2 branches covered.">        boolean exists = cursor.getCount() &gt; 0;</span>
+<span class="fc" id="L93">        cursor.close();</span>
+<span class="fc" id="L94">        return exists;</span>
+    }
+
+    public boolean userExists(String username) {
+<span class="fc" id="L98">        SQLiteDatabase db = this.getReadableDatabase();</span>
+<span class="fc" id="L99">        Cursor cursor = db.rawQuery(</span>
+                &quot;SELECT * FROM &quot; + TABLE_USERS + &quot; WHERE &quot; + COL_USERNAME + &quot; = ?&quot;,
+                new String[]{username});
+<span class="fc bfc" id="L102" title="All 2 branches covered.">        boolean exists = cursor.getCount() &gt; 0;</span>
+<span class="fc" id="L103">        cursor.close();</span>
+<span class="fc" id="L104">        return exists;</span>
+    }
+
+    public String getUserThemeDescription(String username) {
+<span class="fc" id="L108">        SQLiteDatabase db = this.getReadableDatabase();</span>
+<span class="fc" id="L109">        Cursor cursor = db.rawQuery(</span>
+                &quot;SELECT &quot; + COL_THEME_DESC + &quot; FROM &quot; + TABLE_USERS
+                        + &quot; WHERE &quot; + COL_USERNAME + &quot; = ?&quot;,
+                new String[]{username});
+<span class="fc" id="L113">        String theme = null;</span>
+<span class="pc bpc" id="L114" title="1 of 2 branches missed.">        if (cursor.moveToFirst()) {</span>
+<span class="fc" id="L115">            theme = cursor.getString(0);</span>
+        }
+<span class="fc" id="L117">        cursor.close();</span>
+<span class="pc bpc" id="L118" title="1 of 2 branches missed.">        return theme != null ? theme : &quot;&quot;;</span>
+    }
+
+    public String getThemeJson(String username) {
+<span class="fc" id="L122">        SQLiteDatabase db = this.getReadableDatabase();</span>
+<span class="fc" id="L123">        Cursor cursor = db.rawQuery(</span>
+                &quot;SELECT &quot; + COL_THEME_JSON + &quot; FROM &quot; + TABLE_USERS
+                        + &quot; WHERE &quot; + COL_USERNAME + &quot; = ?&quot;,
+                new String[]{username});
+<span class="fc" id="L127">        String json = null;</span>
+<span class="pc bpc" id="L128" title="1 of 2 branches missed.">        if (cursor.moveToFirst()) {</span>
+<span class="fc" id="L129">            json = cursor.getString(0);</span>
+        }
+<span class="fc" id="L131">        cursor.close();</span>
+<span class="pc bpc" id="L132" title="1 of 2 branches missed.">        return json != null ? json : &quot;&quot;;</span>
+    }
+
+    public void updateThemeJson(String username, String themeJson) {
+<span class="fc" id="L136">        SQLiteDatabase db = this.getWritableDatabase();</span>
+<span class="fc" id="L137">        ContentValues values = new ContentValues();</span>
+<span class="fc" id="L138">        values.put(COL_THEME_JSON, themeJson);</span>
+<span class="fc" id="L139">        db.update(TABLE_USERS, values, COL_USERNAME + &quot; = ?&quot;, new String[]{username});</span>
+<span class="fc" id="L140">    }</span>
+
+    public boolean addCityForUser(String username, String city) {
+<span class="fc" id="L143">        SQLiteDatabase db = this.getWritableDatabase();</span>
+<span class="fc" id="L144">        ContentValues values = new ContentValues();</span>
+<span class="fc" id="L145">        values.put(COL_CITY_USERNAME, username);</span>
+<span class="fc" id="L146">        values.put(COL_CITY_NAME, city);</span>
+
+<span class="fc" id="L148">        long result = db.insert(TABLE_CITIES, null, values);</span>
+<span class="pc bpc" id="L149" title="1 of 2 branches missed.">        return result != -1;</span>
+    }
+
+    public boolean removeCityForUser(String username, String city) {
+<span class="fc" id="L153">        SQLiteDatabase db = this.getWritableDatabase();</span>
+
+<span class="fc" id="L155">        int rowsDeleted = db.delete(</span>
+                TABLE_CITIES,
+                COL_CITY_USERNAME + &quot; = ? AND &quot; + COL_CITY_NAME + &quot; = ?&quot;,
+                new String[]{username, city}
+        );
+
+<span class="pc bpc" id="L161" title="1 of 2 branches missed.">        return rowsDeleted &gt; 0;</span>
+    }
+
+    public boolean cityExistsForUser(String username, String city) {
+<span class="fc" id="L165">        SQLiteDatabase db = this.getReadableDatabase();</span>
+<span class="fc" id="L166">        Cursor cursor = db.rawQuery(</span>
+                &quot;SELECT * FROM &quot; + TABLE_CITIES
+                        + &quot; WHERE &quot; + COL_CITY_USERNAME + &quot; = ? AND &quot; + COL_CITY_NAME + &quot; = ?&quot;,
+                new String[]{username, city});
+
+<span class="pc bpc" id="L171" title="1 of 2 branches missed.">        boolean exists = cursor.getCount() &gt; 0;</span>
+<span class="fc" id="L172">        cursor.close();</span>
+<span class="fc" id="L173">        return exists;</span>
+    }
+
+    public ArrayList&lt;String&gt; getCitiesForUser(String username) {
+<span class="fc" id="L177">        ArrayList&lt;String&gt; cities = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L178">        SQLiteDatabase db = this.getReadableDatabase();</span>
+
+<span class="fc" id="L180">        Cursor cursor = db.rawQuery(</span>
+                &quot;SELECT &quot; + COL_CITY_NAME + &quot; FROM &quot; + TABLE_CITIES
+                        + &quot; WHERE &quot; + COL_CITY_USERNAME + &quot; = ?&quot;,
+                new String[]{username});
+
+<span class="fc bfc" id="L185" title="All 2 branches covered.">        if (cursor.moveToFirst()) {</span>
+            do {
+<span class="fc" id="L187">                cities.add(cursor.getString(0));</span>
+<span class="pc bpc" id="L188" title="1 of 2 branches missed.">            } while (cursor.moveToNext());</span>
+        }
+
+<span class="fc" id="L191">        cursor.close();</span>
+<span class="fc" id="L192">        return cities;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

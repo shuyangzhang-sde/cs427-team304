@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ThemePromptBuilder.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">app</a> &gt; <a href="index.source.html" class="el_package">edu.uiuc.cs427app.theme</a> &gt; <span class="el_source">ThemePromptBuilder.java</span></div><h1>ThemePromptBuilder.java</h1><pre class="source lang-java linenums">package edu.uiuc.cs427app.theme;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
+/** Builds the prompt and schema for structured theme generation. */
+public final class ThemePromptBuilder {
+
+    /** Utility class. */
+    private ThemePromptBuilder() {
+    }
+
+    /** Builds a prompt that asks for one theme JSON object. */
+    public static String buildUserPrompt(String themeDescription) {
+<span class="nc" id="L16">        return &quot;Create a mobile app theme JSON for this description: \&quot;&quot; + themeDescription + &quot;\&quot;.\n&quot;</span>
+                + &quot;Return one JSON object only.\n&quot;
+                + &quot;Use exactly these keys: backgroundColor, textColor, accentColor, cardColor, &quot;
+                + &quot;headerColor, borderColor, emojiHint.\n&quot;
+                + &quot;Every color must be a valid #RRGGBB string.\n&quot;
+                + &quot;Choose colors with strong text/background contrast.&quot;;
+    }
+
+    /** Builds the JSON schema expected from the model. */
+    public static JSONObject buildJsonSchema() throws JSONException {
+<span class="nc" id="L26">        JSONObject schema = new JSONObject();</span>
+<span class="nc" id="L27">        schema.put(&quot;type&quot;, &quot;object&quot;);</span>
+<span class="nc" id="L28">        schema.put(&quot;additionalProperties&quot;, false);</span>
+<span class="nc" id="L29">        schema.put(&quot;required&quot;, new JSONArray()</span>
+<span class="nc" id="L30">                .put(&quot;backgroundColor&quot;)</span>
+<span class="nc" id="L31">                .put(&quot;textColor&quot;)</span>
+<span class="nc" id="L32">                .put(&quot;accentColor&quot;)</span>
+<span class="nc" id="L33">                .put(&quot;cardColor&quot;)</span>
+<span class="nc" id="L34">                .put(&quot;headerColor&quot;)</span>
+<span class="nc" id="L35">                .put(&quot;borderColor&quot;)</span>
+<span class="nc" id="L36">                .put(&quot;emojiHint&quot;));</span>
+
+<span class="nc" id="L38">        JSONObject properties = new JSONObject();</span>
+<span class="nc" id="L39">        properties.put(&quot;backgroundColor&quot;, buildHexColorProperty());</span>
+<span class="nc" id="L40">        properties.put(&quot;textColor&quot;, buildHexColorProperty());</span>
+<span class="nc" id="L41">        properties.put(&quot;accentColor&quot;, buildHexColorProperty());</span>
+<span class="nc" id="L42">        properties.put(&quot;cardColor&quot;, buildHexColorProperty());</span>
+<span class="nc" id="L43">        properties.put(&quot;headerColor&quot;, buildHexColorProperty());</span>
+<span class="nc" id="L44">        properties.put(&quot;borderColor&quot;, buildHexColorProperty());</span>
+
+<span class="nc" id="L46">        JSONObject emojiProperty = new JSONObject();</span>
+<span class="nc" id="L47">        emojiProperty.put(&quot;type&quot;, &quot;string&quot;);</span>
+<span class="nc" id="L48">        emojiProperty.put(&quot;maxLength&quot;, 4);</span>
+<span class="nc" id="L49">        properties.put(&quot;emojiHint&quot;, emojiProperty);</span>
+
+<span class="nc" id="L51">        schema.put(&quot;properties&quot;, properties);</span>
+<span class="nc" id="L52">        return schema;</span>
+    }
+
+    /** Creates the shared schema fragment for a hex color field. */
+    private static JSONObject buildHexColorProperty() throws JSONException {
+<span class="nc" id="L57">        JSONObject property = new JSONObject();</span>
+<span class="nc" id="L58">        property.put(&quot;type&quot;, &quot;string&quot;);</span>
+<span class="nc" id="L59">        property.put(&quot;pattern&quot;, &quot;^#[0-9A-Fa-f]{6}$&quot;);</span>
+<span class="nc" id="L60">        return property;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>
